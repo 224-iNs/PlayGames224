@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Kebun Ceria - Game Edukasi Anak</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sky:#8FE1EC;
+    --sky-deep:#57C6DC;
+    --grass:#8AD16B;
+    --grass-deep:#5FAE49;
+    --sun:#FFD449;
+    --sun-deep:#F5A623;
+    --coral:#FF7A6E;
+    --grape:#B693FF;
+    --blue:#5AB8E8;
+    --cream:#FFFBF0;
+    --ink:#3A3358;
+    --ink-soft:#6B5F8C;
+    --white:#FFFFFF;
+    --radius-lg:28px;
+    --radius-md:18px;
+    --shadow:0 8px 0 rgba(58,51,88,0.18);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0; padding:0; height:100%; overflow:hidden;
+    font-family:'Baloo 2','Comic Sans MS',system-ui,sans-serif;
+    color:var(--ink);
+    touch-action:manipulation;
+  }
+  body{
+    background:linear-gradient(180deg,var(--sky) 0%,var(--sky-deep) 55%, var(--grass) 55%, var(--grass-deep) 100%);
+    position:relative;
+    user-select:none;
+    -webkit-user-select:none;
+  }
+  #app{ position:relative; width:100%; height:100%; overflow:hidden; }
+
+  /* decorative background hills/sun (fixed, behind screens) */
+  .bg-decor{ position:absolute; inset:0; pointer-events:none; z-index:0; }
+  .bg-sun{
+    position:absolute; top:4%; right:6%; width:70px; height:70px; border-radius:50%;
+    background:radial-gradient(circle at 35% 35%, #FFE68A, var(--sun-deep));
+    box-shadow:0 0 0 10px rgba(255,212,73,0.25);
+    animation:sunPulse 4s ease-in-out infinite;
+  }
+  @keyframes sunPulse{ 0%,100%{transform:scale(1);} 50%{transform:scale(1.06);} }
+  .bg-cloud{ position:absolute; background:#fff; border-radius:50px; opacity:.85; }
+  .bg-hill{ position:absolute; bottom:0; left:0; width:100%; height:14%; background:var(--grass-deep); border-radius:50% 50% 0 0/100% 100% 0 0; opacity:.5; }
+
+  .screen{
+    position:absolute; inset:0; z-index:1;
+    display:none; flex-direction:column; align-items:center;
+    padding:14px; overflow:hidden;
+  }
+  .screen.active{ display:flex; }
+
+  /* ===== Header (game screens) ===== */
+  .topbar{
+    width:100%; max-width:520px; display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:6px; flex-shrink:0;
+  }
+  .icon-btn{
+    width:52px; height:52px; border-radius:50%; border:none;
+    background:var(--white); box-shadow:var(--shadow);
+    font-size:24px; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; color:var(--ink); flex-shrink:0;
+    transition:transform .1s;
+  }
+  .icon-btn:active{ transform:translateY(4px); box-shadow:0 2px 0 rgba(58,51,88,0.18); }
+  .title-pill{
+    background:var(--white); border-radius:999px; padding:10px 22px; box-shadow:var(--shadow);
+    font-weight:800; font-size:1.15rem; color:var(--ink); text-align:center; flex:1; margin:0 8px;
+  }
+  .stars-row{ display:flex; gap:3px; font-size:1.3rem; line-height:1; }
+  .star-slot{ opacity:.35; }
+  .star-slot.filled{ opacity:1; filter:drop-shadow(0 2px 0 rgba(0,0,0,.1)); animation:starPop .35s ease; }
+  @keyframes starPop{ 0%{transform:scale(0);} 60%{transform:scale(1.35);} 100%{transform:scale(1);} }
+
+  /* ===== HOME SCREEN ===== */
+  #screen-home{ justify-content:flex-start; padding-top:22px; }
+  .home-info-btn{
+    position:absolute; top:16px; right:16px; z-index:3;
+  }
+  .mascot-wrap{ text-align:center; margin-bottom:6px; }
+  .mascot{ width:110px; height:110px; animation:beeFloat 2.6s ease-in-out infinite; filter:drop-shadow(0 6px 0 rgba(58,51,88,.15)); }
+  @keyframes beeFloat{ 0%,100%{ transform:translateY(0) rotate(-3deg);} 50%{ transform:translateY(-10px) rotate(3deg);} }
+  .home-title{
+    font-size:2rem; font-weight:800; color:#fff; text-shadow:0 3px 0 rgba(58,51,88,.35);
+    text-align:center; margin:2px 0 2px;
+  }
+  .home-sub{ color:#fff; opacity:.95; font-weight:600; text-align:center; margin-bottom:16px; font-size:1rem; text-shadow:0 2px 0 rgba(58,51,88,.25);}
+
+  .menu-cards{ display:flex; flex-direction:column; gap:14px; width:100%; max-width:420px; }
+  .menu-card{
+    display:flex; align-items:center; gap:14px;
+    background:var(--white); border:none; border-radius:var(--radius-lg);
+    padding:14px 18px; box-shadow:var(--shadow); cursor:pointer; text-align:left;
+    transition:transform .1s;
+  }
+  .menu-card:active{ transform:translateY(5px) scale(.99); box-shadow:0 3px 0 rgba(58,51,88,0.18); }
+  .menu-card .emoji-badge{
+    width:62px; height:62px; border-radius:50%; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:2rem;
+  }
+  .badge-1{ background:#FFE3E0; }
+  .badge-2{ background:#E3F3FF; }
+  .badge-3{ background:#FFF3D6; }
+  .menu-card h3{ margin:0 0 2px; font-size:1.15rem; font-weight:800; color:var(--ink); }
+  .menu-card p{ margin:0; font-size:.85rem; color:var(--ink-soft); font-weight:600; }
+  .menu-card .mini-stars{ margin-top:4px; font-size:.8rem; }
+
+  /* ===== GAME PLAY AREA (shared) ===== */
+  .play-area{
+    flex:1; width:100%; max-width:520px; display:flex; flex-direction:column;
+    align-items:center; justify-content:flex-start; gap:10px; position:relative; min-height:0;
+  }
+  .prompt-text{
+    background:rgba(255,255,255,.9); border-radius:999px; padding:8px 20px;
+    font-weight:700; font-size:1rem; color:var(--ink); text-align:center; flex-shrink:0;
+  }
+
+  /* GAME 1: match colors */
+  .g1-items{ display:flex; gap:14px; justify-content:center; flex-wrap:wrap; padding:6px; min-height:100px; flex-shrink:0; }
+  .drag-item{
+    width:74px; height:74px; border-radius:50%; background:var(--white); box-shadow:var(--shadow);
+    display:flex; align-items:center; justify-content:center; cursor:grab; touch-action:none;
+    position:relative; z-index:5;
+  }
+  .drag-item svg{ width:46px; height:46px; pointer-events:none; }
+  .drag-item.dragging{ cursor:grabbing; box-shadow:0 12px 18px rgba(0,0,0,.25); z-index:50; }
+  .drag-item.placed{ visibility:hidden; }
+
+  .g1-targets{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; padding:8px; }
+  .target-zone{
+    width:86px; height:86px; border-radius:50%; border:4px dashed rgba(255,255,255,.9);
+    display:flex; align-items:center; justify-content:center; flex-direction:column;
+    font-size:.68rem; font-weight:800; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.2);
+    position:relative; transition:transform .15s;
+  }
+  .target-zone.hover{ transform:scale(1.08); border-style:solid; }
+  .target-zone.correct-flash{ animation:zonePulse .5s ease; }
+  @keyframes zonePulse{ 0%{transform:scale(1);} 50%{transform:scale(1.18);} 100%{transform:scale(1);} }
+  .target-zone .placed-icon{ width:40px; height:40px; }
+
+  /* GAME 2: size sort */
+  .g2-objects{ display:flex; gap:18px; justify-content:center; align-items:flex-end; flex:1; padding:10px; flex-wrap:wrap; }
+  .size-item{ cursor:pointer; transition:transform .12s; display:flex; align-items:flex-end; justify-content:center; }
+  .size-item:active{ transform:scale(.95); }
+  .size-item.gone{ visibility:hidden; }
+  .size-item.shake{ animation:shakeX .4s; }
+  @keyframes shakeX{ 0%,100%{transform:translateX(0);} 25%{transform:translateX(-10px);} 75%{transform:translateX(10px);} }
+
+  .g2-slots{ display:flex; gap:16px; justify-content:center; padding:10px 0 4px; }
+  .size-slot{
+    width:86px; height:86px; border-radius:var(--radius-md); border:4px dashed rgba(255,255,255,.85);
+    display:flex; align-items:center; justify-content:center; flex-direction:column; gap:2px;
+    font-size:.72rem; font-weight:800; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.2);
+    position:relative;
+  }
+  .size-slot .slot-icon{ opacity:0; transition:opacity .2s; }
+  .size-slot.filled .slot-icon{ opacity:1; }
+  .size-slot.next-hint{ border-style:solid; border-color:#fff; }
+
+  /* GAME 3: fruit color */
+  .g3-fruit-wrap{ display:flex; flex-direction:column; align-items:center; gap:8px; padding:6px; }
+  .g3-fruit-circle{
+    width:150px; height:150px; border-radius:50%; background:rgba(255,255,255,.55);
+    display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow);
+  }
+  .g3-fruit-circle svg{ width:100px; height:100px; transition:filter .3s; }
+  .g3-fruit-name{ font-weight:800; font-size:1.3rem; color:#fff; text-shadow:0 2px 0 rgba(58,51,88,.3); }
+
+  .g3-swatches{ display:flex; gap:14px; justify-content:center; flex-wrap:wrap; padding:10px; }
+  .swatch-btn{
+    width:64px; height:64px; border-radius:50%; border:4px solid #fff; box-shadow:var(--shadow);
+    cursor:pointer; transition:transform .1s;
+  }
+  .swatch-btn:active{ transform:scale(.9); }
+  .swatch-btn.wrong-shake{ animation:shakeX .4s; }
+
+  /* ===== Round complete / finish overlays ===== */
+  .overlay{
+    position:absolute; inset:0; z-index:20; display:none; align-items:center; justify-content:center;
+    background:rgba(58,51,88,.35); backdrop-filter:blur(2px);
+  }
+  .overlay.active{ display:flex; }
+  .overlay-card{
+    background:var(--cream); border-radius:var(--radius-lg); padding:26px 24px; text-align:center;
+    box-shadow:0 10px 0 rgba(58,51,88,.25); max-width:320px; width:88%;
+    animation:cardPop .35s ease;
+  }
+  @keyframes cardPop{ 0%{transform:scale(.6); opacity:0;} 100%{transform:scale(1); opacity:1;} }
+  .overlay-card .big-emoji{ font-size:3.2rem; margin-bottom:6px; }
+  .overlay-card h2{ margin:0 0 6px; font-size:1.4rem; color:var(--ink); }
+  .overlay-card p{ margin:0 0 16px; color:var(--ink-soft); font-weight:600; }
+  .overlay-stars{ font-size:2rem; margin-bottom:16px; letter-spacing:4px; }
+  .btn-row{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+  .btn{
+    border:none; border-radius:999px; padding:12px 22px; font-weight:800; font-size:.95rem;
+    cursor:pointer; box-shadow:var(--shadow); font-family:inherit; transition:transform .1s;
+  }
+  .btn:active{ transform:translateY(4px); box-shadow:0 2px 0 rgba(58,51,88,0.18); }
+  .btn-primary{ background:var(--coral); color:#fff; }
+  .btn-secondary{ background:#fff; color:var(--ink); }
+
+  /* info modal */
+  .modal-card{ max-width:340px; text-align:left; }
+  .modal-card h2{ text-align:center; }
+  .modal-card ol{ padding-left:20px; margin:0 0 16px; color:var(--ink); font-weight:600; font-size:.92rem; line-height:1.5;}
+  .modal-card li{ margin-bottom:8px; }
+
+  /* confetti */
+  #confetti-layer{ position:absolute; inset:0; z-index:60; pointer-events:none; overflow:hidden; }
+  .confetti-piece{ position:absolute; top:-20px; border-radius:3px; animation:confettiFall linear forwards; }
+  @keyframes confettiFall{
+    0%{ transform:translateY(0) rotate(0deg); opacity:1; }
+    100%{ transform:translateY(110vh) rotate(540deg); opacity:.9; }
+  }
+
+  /* floaty helper mascot reaction (small, top corner during games) */
+  .mini-mascot{ position:fixed; width:56px; height:56px; right:14px; bottom:14px; z-index:15; pointer-events:none; transition:transform .25s; }
+  .mini-mascot.happy{ animation:happySpin .6s ease; }
+  .mini-mascot.sad{ animation:sadWobble .5s ease; }
+  @keyframes happySpin{ 0%{transform:rotate(0) scale(1);} 50%{transform:rotate(20deg) scale(1.25);} 100%{transform:rotate(0) scale(1);} }
+  @keyframes sadWobble{ 0%,100%{transform:rotate(0);} 25%{transform:rotate(-12deg);} 75%{transform:rotate(12deg);} }
+
+  @media (max-width:360px){
+    .home-title{ font-size:1.6rem; }
+    .menu-card h3{ font-size:1rem; }
+    .g3-fruit-circle{ width:120px; height:120px; }
+    .g3-fruit-circle svg{ width:80px; height:80px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-decor">
+  <div class="bg-sun"></div>
+  <div class="bg-cloud" style="width:60px;height:22px;top:10%;left:8%;"></div>
+  <div class="bg-cloud" style="width:40px;height:16px;top:16%;left:20%;"></div>
+  <div class="bg-hill"></div>
+</div>
+
+<div id="app">
+
+  <!-- ============ HOME ============ -->
+  <div class="screen active" id="screen-home">
+    <button class="icon-btn home-info-btn" onclick="openInfo()">ℹ️</button>
+    <div class="mascot-wrap">
+      <svg class="mascot" viewBox="0 0 100 100"><g id="mascot-home"></g></svg>
+    </div>
+    <div class="home-title">Kebun Ceria</div>
+    <div class="home-sub">Yuk belajar warna &amp; bentuk bersama Bebi Lebah!</div>
+
+    <div class="menu-cards">
+      <button class="menu-card" onclick="startGame('g1')">
+        <div class="emoji-badge badge-1">🎨</div>
+        <div>
+          <h3>Cocokkan Warna</h3>
+          <p>Seret buah ke warna yang sama</p>
+        </div>
+      </button>
+      <button class="menu-card" onclick="startGame('g2')">
+        <div class="emoji-badge badge-2">📏</div>
+        <div>
+          <h3>Urutkan Ukuran</h3>
+          <p>Besar, sedang, lalu kecil</p>
+        </div>
+      </button>
+      <button class="menu-card" onclick="startGame('g3')">
+        <div class="emoji-badge badge-3">🍊</div>
+        <div>
+          <h3>Warna &amp; Buah</h3>
+          <p>Tebak warna buah yang tepat</p>
+        </div>
+      </button>
+    </div>
+  </div>
+
+  <!-- ============ GAME 1: MATCH COLOR ============ -->
+  <div class="screen" id="screen-g1">
+    <div class="topbar">
+      <button class="icon-btn" onclick="goHome()">←</button>
+      <div class="title-pill">Cocokkan Warna</div>
+      <div class="stars-row" id="g1-stars"></div>
+    </div>
+    <div class="play-area">
+      <div class="prompt-text">Seret buahnya ke lingkaran warna yang sama! 👉</div>
+      <div class="g1-items" id="g1-items"></div>
+      <div class="g1-targets" id="g1-targets"></div>
+    </div>
+  </div>
+
+  <!-- ============ GAME 2: SIZE SORT ============ -->
+  <div class="screen" id="screen-g2">
+    <div class="topbar">
+      <button class="icon-btn" onclick="goHome()">←</button>
+      <div class="title-pill">Urutkan Ukuran</div>
+      <div class="stars-row" id="g2-stars"></div>
+    </div>
+    <div class="play-area">
+      <div class="prompt-text" id="g2-prompt">Sentuh yang paling BESAR dulu ya!</div>
+      <div class="g2-objects" id="g2-objects"></div>
+      <div class="g2-slots" id="g2-slots"></div>
+    </div>
+  </div>
+
+  <!-- ============ GAME 3: FRUIT COLOR ============ -->
+  <div class="screen" id="screen-g3">
+    <div class="topbar">
+      <button class="icon-btn" onclick="goHome()">←</button>
+      <div class="title-pill">Warna &amp; Buah</div>
+      <div class="stars-row" id="g3-stars"></div>
+    </div>
+    <div class="play-area">
+      <div class="prompt-text">Ini apa warnanya?</div>
+      <div class="g3-fruit-wrap">
+        <div class="g3-fruit-circle"><svg viewBox="0 0 100 100" id="g3-fruit-svg"></svg></div>
+        <div class="g3-fruit-name" id="g3-fruit-name">Jeruk</div>
+      </div>
+      <div class="g3-swatches" id="g3-swatches"></div>
+    </div>
+  </div>
+
+  <!-- overlays -->
+  <div class="overlay" id="overlay-round">
+    <div class="overlay-card">
+      <div class="big-emoji">🌟</div>
+      <h2 id="round-title">Hebat sekali!</h2>
+      <p id="round-sub">Kamu berhasil menyelesaikan permainan ini.</p>
+      <div class="overlay-stars" id="round-stars"></div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="goHome()">Menu Utama</button>
+        <button class="btn btn-primary" id="round-next-btn">Lanjut</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay-info">
+    <div class="overlay-card modal-card">
+      <div class="big-emoji" style="text-align:center;">📲</div>
+      <h2>Cara Berbagi &amp; Memasang</h2>
+      <ol>
+        <li>Kirim file ini ke teman lewat WhatsApp, atau unggah ke Google Drive lalu bagikan tautannya.</li>
+        <li>Buka file-nya langsung dari HP (lewat browser).</li>
+        <li>Pilih menu browser → <b>"Tambah ke Layar Utama"</b> agar muncul ikon seperti aplikasi.</li>
+        <li>Selesai! Game bisa dimainkan tanpa internet. 🎉</li>
+      </ol>
+      <div class="btn-row"><button class="btn btn-primary" onclick="closeInfo()">Mengerti!</button></div>
+    </div>
+  </div>
+
+  <svg class="mini-mascot" id="mini-mascot" viewBox="0 0 100 100" style="display:none;"><use href="#bee-shape"></use></svg>
+  <div id="confetti-layer"></div>
+</div>
+
+<!-- hidden defs for reusable bee shape -->
+<svg width="0" height="0" style="position:absolute;">
+  <defs>
+    <g id="bee-shape">
+      <ellipse cx="50" cy="55" rx="26" ry="22" fill="#FFD449"/>
+      <path d="M26 45 A26 22 0 0 1 74 45" fill="none" stroke="#3A3358" stroke-width="6"/>
+      <path d="M28 62 A24 10 0 0 0 72 62" fill="none" stroke="#3A3358" stroke-width="6"/>
+      <ellipse cx="30" cy="38" rx="14" ry="10" fill="#fff" opacity="0.85" transform="rotate(-20 30 38)"/>
+      <ellipse cx="70" cy="38" rx="14" ry="10" fill="#fff" opacity="0.85" transform="rotate(20 70 38)"/>
+      <circle cx="40" cy="52" r="5" fill="#3A3358"/>
+      <circle cx="60" cy="52" r="5" fill="#3A3358"/>
+      <circle cx="41.5" cy="50.5" r="1.6" fill="#fff"/>
+      <circle cx="61.5" cy="50.5" r="1.6" fill="#fff"/>
+      <path d="M42 62 Q50 68 58 62" stroke="#3A3358" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <line x1="40" y1="30" x2="35" y2="20" stroke="#3A3358" stroke-width="3" stroke-linecap="round"/>
+      <line x1="60" y1="30" x2="65" y2="20" stroke="#3A3358" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="35" cy="20" r="3" fill="#3A3358"/>
+      <circle cx="65" cy="20" r="3" fill="#3A3358"/>
+    </g>
+  </defs>
+</svg>
+
+<script>
+/* ============================================================
+   KEBUN CERIA - game edukasi anak (single file, offline-ready)
+   ============================================================ */
+
+/* ---------- Audio (Web Audio API, no external files) ---------- */
+let audioCtx = null;
+function ensureAudio(){
+  if(!audioCtx){
+    try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){}
+  } else if (audioCtx.state === 'suspended'){ audioCtx.resume(); }
+}
+function tone(freq, start, dur, type='sine', vol=0.18){
+  if(!audioCtx) return;
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(0, audioCtx.currentTime+start);
+  g.gain.linearRampToValueAtTime(vol, audioCtx.currentTime+start+0.02);
+  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+start+dur);
+  o.connect(g); g.connect(audioCtx.destination);
+  o.start(audioCtx.currentTime+start);
+  o.stop(audioCtx.currentTime+start+dur+0.02);
+}
+function playCorrect(){ tone(523,0,.14,'triangle'); tone(659,.1,.14,'triangle'); tone(880,.2,.22,'triangle'); }
+function playWrong(){ tone(180,0,.18,'sawtooth',0.12); tone(140,.12,.22,'sawtooth',0.12); }
+function playTap(){ tone(700,0,.05,'sine',0.08); }
+function playWin(){ [523,659,784,1047].forEach((f,i)=>tone(f, i*0.13, .2, 'triangle')); }
+document.addEventListener('pointerdown', ensureAudio, {once:true});
+
+/* ---------- Mascot drawing (home + mini reaction) ---------- */
+document.getElementById('mascot-home').innerHTML = document.getElementById('bee-shape').innerHTML;
+const miniMascot = document.getElementById('mini-mascot');
+function showMiniMascot(mood){
+  miniMascot.style.display = 'block';
+  miniMascot.classList.remove('happy','sad');
+  void miniMascot.offsetWidth;
+  miniMascot.classList.add(mood);
+}
+
+/* ---------- Confetti ---------- */
+const confettiColors = ['#FF7A6E','#FFD449','#8AD16B','#5AB8E8','#B693FF','#FF9F45'];
+function burstConfetti(x, y, count=22){
+  const layer = document.getElementById('confetti-layer');
+  for(let i=0;i<count;i++){
+    const el = document.createElement('div');
+    el.className = 'confetti-piece';
+    const size = 6 + Math.random()*6;
+    el.style.width = size+'px';
+    el.style.height = (size*0.5+4)+'px';
+    el.style.background = confettiColors[Math.floor(Math.random()*confettiColors.length)];
+    el.style.left = (x + (Math.random()*160-80)) + 'px';
+    el.style.top = (y + (Math.random()*40-20)) + 'px';
+    const dur = 1.1 + Math.random()*0.9;
+    el.style.animationDuration = dur+'s';
+    layer.appendChild(el);
+    setTimeout(()=>el.remove(), dur*1000+50);
+  }
+}
+function burstConfettiCenter(){
+  burstConfetti(window.innerWidth/2, window.innerHeight*0.3, 40);
+}
+
+/* ---------- Icon library (custom flat SVG, colored via fill) ---------- */
+function icon(type, fill){
+  const f = fill || '#FF7A6E';
+  switch(type){
+    case 'apple': return `<g><path d="M50 30c-14 0-24 12-24 28 0 16 12 30 24 30s24-14 24-30c0-16-10-28-24-28z" fill="${f}"/><path d="M50 30c0-6 4-10 9-12" stroke="#5FAE49" stroke-width="4" fill="none" stroke-linecap="round"/><ellipse cx="47" cy="15" rx="7" ry="4" fill="#8AD16B" transform="rotate(-25 47 15)"/></g>`;
+    case 'banana': return `<g><path d="M28 66c6 14 34 18 44 2 3-5 1-10-4-8-10 16-32 12-40-2-2-4-2 3 0 8z" fill="${f}"/><path d="M28 66C22 50 30 30 46 24" stroke="${f}" stroke-width="10" fill="none" stroke-linecap="round"/><circle cx="47" cy="23" r="4" fill="#7a5230"/></g>`;
+    case 'leaf': return `<g><path d="M50 20c22 6 28 30 18 50-16-2-30-18-30-38 0-6 4-10 12-12z" fill="${f}"/><path d="M52 24c-6 18 -2 34 12 44" stroke="#3f7a2f" stroke-width="3" fill="none" stroke-linecap="round"/></g>`;
+    case 'eggplant': return `<g><path d="M50 34c14 0 22 14 18 30-3 14-14 22-18 22s-15-8-18-22c-4-16 4-30 18-30z" fill="${f}"/><path d="M42 26c2 4 4 6 8 6s6-2 8-6" stroke="#5FAE49" stroke-width="4" fill="none" stroke-linecap="round"/><ellipse cx="50" cy="24" rx="9" ry="4" fill="#8AD16B"/></g>`;
+    case 'orange': return `<g><circle cx="50" cy="54" r="28" fill="${f}"/><path d="M50 26v10M36 32l6 8M64 32l-6 8" stroke="${f}" stroke-width="0"/><ellipse cx="47" cy="18" rx="6" ry="4" fill="#8AD16B" transform="rotate(-20 47 18)"/></g>`;
+    case 'blueberry': return `<g><circle cx="38" cy="58" r="15" fill="${f}"/><circle cx="62" cy="58" r="15" fill="${f}"/><circle cx="50" cy="40" r="15" fill="${f}"/><path d="M46 30l3 5 3-5" stroke="#3A3358" stroke-width="2" fill="none" stroke-linecap="round"/></g>`;
+    case 'grape': return `<g><circle cx="40" cy="46" r="10" fill="${f}"/><circle cx="58" cy="46" r="10" fill="${f}"/><circle cx="49" cy="60" r="10" fill="${f}"/><circle cx="34" cy="62" r="10" fill="${f}"/><circle cx="64" cy="62" r="10" fill="${f}"/><circle cx="49" cy="76" r="10" fill="${f}"/><path d="M49 30c0 6 0 10 0 14" stroke="#5FAE49" stroke-width="4" stroke-linecap="round"/><ellipse cx="55" cy="26" rx="8" ry="4" fill="#8AD16B" transform="rotate(20 55 26)"/></g>`;
+    case 'avocado': return `<g><path d="M50 22c16 0 24 16 24 34s-10 26-24 26-24-10-24-26S34 22 50 22z" fill="${f}"/><circle cx="50" cy="60" r="12" fill="#7a5230"/></g>`;
+    case 'strawberry': return `<g><path d="M50 34c16 0 26 14 22 30-3 12-14 22-22 22s-19-10-22-22c-4-16 6-30 22-30z" fill="${f}"/><path d="M36 26l8 8 6-10 6 10 8-8" stroke="#5FAE49" stroke-width="4" fill="none" stroke-linejoin="round" stroke-linecap="round"/><circle cx="42" cy="50" r="2" fill="#fff"/><circle cx="58" cy="50" r="2" fill="#fff"/><circle cx="50" cy="60" r="2" fill="#fff"/><circle cx="42" cy="68" r="2" fill="#fff"/><circle cx="58" cy="68" r="2" fill="#fff"/></g>`;
+    case 'watermelon': return `<g><path d="M20 50a30 30 0 0 1 60 0z" fill="${f}"/><path d="M20 50a30 30 0 0 0 60 0" fill="#fff" opacity="0.15"/><circle cx="38" cy="42" r="2" fill="#3A3358"/><circle cx="50" cy="38" r="2" fill="#3A3358"/><circle cx="62" cy="42" r="2" fill="#3A3358"/></g>`;
+    case 'pineapple': return `<g><path d="M40 40c10-6 10-6 20 0 12 6 14 24 10 34-4 10-30 10-34 0-4-10-2-28 4-34z" fill="${f}"/><path d="M50 40l-8-16M50 40l0-18M50 40l8-16" stroke="#5FAE49" stroke-width="4" fill="none" stroke-linecap="round"/></g>`;
+    case 'balloon': return `<g><ellipse cx="50" cy="42" rx="22" ry="26" fill="${f}"/><path d="M50 68l-4 8 4-3 4 3z" fill="${f}"/><path d="M50 76v14" stroke="#999" stroke-width="2"/></g>`;
+    case 'ball': return `<g><circle cx="50" cy="50" r="26" fill="${f}"/><path d="M28 50h44M50 24v52M34 32c10 10 22 10 32 0M34 68c10-10 22-10 32 0" stroke="#fff" stroke-width="3" fill="none" opacity="0.8"/></g>`;
+    case 'star': return `<g><path d="M50 18l9 22 24 2-18 16 6 24-21-13-21 13 6-24-18-16 24-2z" fill="${f}"/></g>`;
+    default: return '';
+  }
+}
+
+/* ================= Screen navigation ================= */
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(id==='screen-home'){ miniMascot.style.display='none'; }
+}
+function goHome(){ showScreen('screen-home'); }
+function openInfo(){ document.getElementById('overlay-info').classList.add('active'); }
+function closeInfo(){ document.getElementById('overlay-info').classList.remove('active'); }
+
+function startGame(which){
+  ensureAudio();
+  if(which==='g1') startG1();
+  if(which==='g2') startG2();
+  if(which==='g3') startG3();
+}
+
+function renderStars(containerId, filled, total=3){
+  const c = document.getElementById(containerId);
+  c.innerHTML = '';
+  for(let i=0;i<total;i++){
+    const s = document.createElement('span');
+    s.className = 'star-slot' + (i<filled?' filled':'');
+    s.textContent = '⭐';
+    c.appendChild(s);
+  }
+}
+
+function showRoundComplete(opts){
+  // opts: {title, sub, stars, nextLabel, onNext}
+  document.getElementById('round-title').textContent = opts.title;
+  document.getElementById('round-sub').textContent = opts.sub;
+  document.getElementById('round-stars').textContent = '⭐'.repeat(opts.stars) + '☆'.repeat(3-opts.stars);
+  const btn = document.getElementById('round-next-btn');
+  btn.textContent = opts.nextLabel;
+  btn.onclick = () => { document.getElementById('overlay-round').classList.remove('active'); opts.onNext(); };
+  document.getElementById('overlay-round').classList.add('active');
+  playWin(); burstConfettiCenter();
+}
+
+/* ================= GAME 1: Cocokkan Warna ================= */
+const G1_ITEMS = [
+  {name:'Apel', type:'apple', color:'merah', hex:'#FF6B6B'},
+  {name:'Pisang', type:'banana', color:'kuning', hex:'#FFD449'},
+  {name:'Daun', type:'leaf', color:'hijau', hex:'#7CC576'},
+  {name:'Terong', type:'eggplant', color:'ungu', hex:'#B693FF'},
+  {name:'Jeruk', type:'orange', color:'oranye', hex:'#FFA94D'},
+  {name:'Bluberi', type:'blueberry', color:'biru', hex:'#5AB8E8'},
+];
+let g1State = { round:0, totalRounds:5, stars:0, matched:0, needed:0, dragging:null };
+
+function startG1(){
+  g1State = { round:0, totalRounds:5, stars:0, matched:0, needed:0, dragging:null };
+  showScreen('screen-g1');
+  renderStars('g1-stars', 0);
+  nextG1Round();
+}
+function nextG1Round(){
+  g1State.round++;
+  if(g1State.round > g1State.totalRounds){
+    showRoundComplete({
+      title:'Kamu Hebat! 🎉', sub:'Semua warna berhasil dicocokkan!',
+      stars:3, nextLabel:'Main Lagi', onNext: startG1
+    });
+    return;
+  }
+  const shuffled = [...G1_ITEMS].sort(()=>Math.random()-0.5);
+  const count = 4;
+  const chosen = shuffled.slice(0,count);
+  g1State.matched = 0; g1State.needed = count;
+
+  const itemsEl = document.getElementById('g1-items');
+  const targetsEl = document.getElementById('g1-targets');
+  itemsEl.innerHTML=''; targetsEl.innerHTML='';
+
+  chosen.forEach((it,i)=>{
+    const el = document.createElement('div');
+    el.className='drag-item';
+    el.dataset.color = it.color;
+    el.innerHTML = `<svg viewBox="0 0 100 100">${icon(it.type, it.hex)}</svg>`;
+    itemsEl.appendChild(el);
+    makeDraggable(el, it.color);
+  });
+
+  const targetOrder = [...chosen].sort(()=>Math.random()-0.5);
+  targetOrder.forEach(it=>{
+    const z = document.createElement('div');
+    z.className='target-zone';
+    z.dataset.color = it.color;
+    z.style.background = it.hex;
+    z.innerHTML = `<span>${it.name==='Daun'?'HIJAU':it.color.toUpperCase()}</span>`;
+    targetsEl.appendChild(z);
+  });
+}
+
+function makeDraggable(el, colorId){
+  let startX, startY, offX, offY, curTarget=null;
+  el.addEventListener('pointerdown', (e)=>{
+    e.preventDefault();
+    el.setPointerCapture(e.pointerId);
+    el.classList.add('dragging');
+    const r = el.getBoundingClientRect();
+    offX = e.clientX - r.left; offY = e.clientY - r.top;
+    el.style.position='fixed'; el.style.left=r.left+'px'; el.style.top=r.top+'px'; el.style.width=r.width+'px'; el.style.height=r.height+'px';
+    document.body.appendChild(el);
+
+    function onMove(ev){
+      el.style.left = (ev.clientX-offX)+'px';
+      el.style.top = (ev.clientY-offY)+'px';
+      const cx = ev.clientX, cy = ev.clientY;
+      const zones = document.querySelectorAll('#g1-targets .target-zone');
+      let found=null;
+      zones.forEach(z=>{
+        const zr = z.getBoundingClientRect();
+        if(cx>=zr.left && cx<=zr.right && cy>=zr.top && cy<=zr.bottom) found=z;
+        z.classList.remove('hover');
+      });
+      if(found){ found.classList.add('hover'); }
+      curTarget = found;
+    }
+    function onUp(ev){
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerup', onUp);
+      el.classList.remove('dragging');
+      document.querySelectorAll('#g1-targets .target-zone').forEach(z=>z.classList.remove('hover'));
+
+      if(curTarget && curTarget.dataset.color === colorId && !curTarget.classList.contains('done')){
+        // correct
+        curTarget.classList.add('done','correct-flash');
+        curTarget.innerHTML = `<svg class="placed-icon" viewBox="0 0 100 100">${icon('star', '#fff')}</svg>`;
+        el.remove();
+        playCorrect(); showMiniMascot('happy');
+        const zr = curTarget.getBoundingClientRect();
+        burstConfetti(zr.left+zr.width/2, zr.top+zr.height/2, 16);
+        g1State.matched++;
+        if(g1State.matched >= g1State.needed){
+          const starsEarned = g1State.round<=5 ? Math.min(g1State.round, 3) : 3;
+          renderStars('g1-stars', Math.min(g1State.round,3));
+          setTimeout(()=>{
+            if(g1State.round===g1State.totalRounds){
+              nextG1Round();
+            } else {
+              showRoundComplete({
+                title:'Asyik! 🌟', sub:'Semua buah cocok dengan warnanya!',
+                stars: Math.min(g1State.round,3), nextLabel:'Lanjut',
+                onNext: nextG1Round
+              });
+            }
+          }, 500);
+        }
+      } else {
+        // wrong: snap back
+        playWrong(); showMiniMascot('sad');
+        el.style.transition='left .3s, top .3s';
+        const home = document.getElementById('g1-items').getBoundingClientRect();
+        el.style.left = home.left+'px'; el.style.top = home.top+'px';
+        setTimeout(()=>{
+          el.style.transition=''; el.style.position=''; el.style.left=''; el.style.top=''; el.style.width=''; el.style.height='';
+          document.getElementById('g1-items').appendChild(el);
+        }, 300);
+      }
+    }
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerup', onUp);
+  });
+}
+
+/* ================= GAME 2: Urutkan Ukuran ================= */
+const G2_SETS = [
+  {name:'Balon', type:'balloon', hex:'#FF7A6E'},
+  {name:'Bola', type:'ball', hex:'#5AB8E8'},
+  {name:'Bintang', type:'star', hex:'#FFD449'},
+  {name:'Apel', type:'apple', hex:'#8AD16B'},
+];
+let g2State = { round:0, totalRounds:5, expectIndex:0, order:['besar','sedang','kecil'] };
+const SIZE_PX = { besar:96, sedang:66, kecil:42 };
+
+function startG2(){
+  g2State = { round:0, totalRounds:5, expectIndex:0 };
+  showScreen('screen-g2');
+  renderStars('g2-stars', 0);
+  nextG2Round();
+}
+function nextG2Round(){
+  g2State.round++;
+  if(g2State.round > g2State.totalRounds){
+    showRoundComplete({ title:'Keren! 🎉', sub:'Kamu jago mengurutkan ukuran!', stars:3, nextLabel:'Main Lagi', onNext:startG2 });
+    return;
+  }
+  g2State.expectIndex = 0;
+  const set = G2_SETS[Math.floor(Math.random()*G2_SETS.length)];
+  const sizes = ['besar','sedang','kecil'].sort(()=>Math.random()-0.5);
+
+  const objEl = document.getElementById('g2-objects');
+  const slotEl = document.getElementById('g2-slots');
+  objEl.innerHTML=''; slotEl.innerHTML='';
+  document.getElementById('g2-prompt').textContent = 'Sentuh yang paling BESAR dulu ya!';
+
+  sizes.forEach(sz=>{
+    const px = SIZE_PX[sz];
+    const wrap = document.createElement('div');
+    wrap.className='size-item';
+    wrap.dataset.size = sz;
+    wrap.innerHTML = `<svg viewBox="0 0 100 100" width="${px}" height="${px}">${icon(set.type, set.hex)}</svg>`;
+    wrap.addEventListener('click', ()=>onG2Tap(wrap, sz, set));
+    objEl.appendChild(wrap);
+  });
+
+  ['besar','sedang','kecil'].forEach(sz=>{
+    const s = document.createElement('div');
+    s.className='size-slot'; s.dataset.size=sz;
+    s.innerHTML = `<div class="slot-icon"><svg viewBox="0 0 100 100" width="${SIZE_PX[sz]*0.5}" height="${SIZE_PX[sz]*0.5}">${icon(set.type,set.hex)}</svg></div><span>${sz.toUpperCase()}</span>`;
+    slotEl.appendChild(s);
+  });
+  document.querySelector(`.size-slot[data-size="besar"]`).classList.add('next-hint');
+}
+function onG2Tap(el, sz, set){
+  const expected = g2State.order[g2State.expectIndex];
+  if(sz === expected){
+    playCorrect(); showMiniMascot('happy');
+    const slot = document.querySelector(`.size-slot[data-size="${sz}"]`);
+    slot.classList.add('filled');
+    slot.classList.remove('next-hint');
+    const r = slot.getBoundingClientRect();
+    burstConfetti(r.left+r.width/2, r.top+r.height/2, 14);
+    el.classList.add('gone');
+    g2State.expectIndex++;
+    if(g2State.expectIndex < g2State.order.length){
+      const nextSz = g2State.order[g2State.expectIndex];
+      document.querySelector(`.size-slot[data-size="${nextSz}"]`).classList.add('next-hint');
+      document.getElementById('g2-prompt').textContent =
+        nextSz==='sedang' ? 'Bagus! Sekarang yang SEDANG.' : 'Terakhir, yang paling KECIL!';
+    } else {
+      renderStars('g2-stars', Math.min(g2State.round,3));
+      setTimeout(()=>{
+        showRoundComplete({
+          title:'Urutan Benar! 👏', sub:'Besar, sedang, kecil — sempurna!',
+          stars: Math.min(g2State.round,3), nextLabel: g2State.round===g2State.totalRounds?'Main Lagi':'Lanjut',
+          onNext: nextG2Round
+        });
+      }, 400);
+    }
+  } else {
+    playWrong(); showMiniMascot('sad');
+    el.classList.add('shake');
+    setTimeout(()=>el.classList.remove('shake'), 400);
+  }
+}
+
+/* ================= GAME 3: Warna & Buah ================= */
+const G3_FRUITS = [
+  {name:'Jeruk', type:'orange', color:'oranye', hex:'#FFA94D'},
+  {name:'Pisang', type:'banana', color:'kuning', hex:'#FFD449'},
+  {name:'Apel', type:'apple', color:'merah', hex:'#FF6B6B'},
+  {name:'Anggur', type:'grape', color:'ungu', hex:'#B693FF'},
+  {name:'Alpukat', type:'avocado', color:'hijau', hex:'#7CC576'},
+  {name:'Bluberi', type:'blueberry', color:'biru', hex:'#5AB8E8'},
+  {name:'Stroberi', type:'strawberry', color:'merah', hex:'#FF6B6B'},
+  {name:'Nanas', type:'pineapple', color:'kuning', hex:'#FFD449'},
+];
+const COLOR_HEX = {merah:'#FF6B6B', kuning:'#FFD449', hijau:'#7CC576', ungu:'#B693FF', oranye:'#FFA94D', biru:'#5AB8E8'};
+let g3State = { round:0, totalRounds:6 };
+
+function startG3(){
+  g3State = { round:0, totalRounds:6 };
+  showScreen('screen-g3');
+  renderStars('g3-stars', 0);
+  nextG3Round();
+}
+function nextG3Round(){
+  g3State.round++;
+  if(g3State.round > g3State.totalRounds){
+    showRoundComplete({ title:'Pintar Sekali! 🎉', sub:'Kamu tahu semua warna buah!', stars:3, nextLabel:'Main Lagi', onNext:startG3 });
+    return;
+  }
+  const fruit = G3_FRUITS[Math.floor(Math.random()*G3_FRUITS.length)];
+  const svg = document.getElementById('g3-fruit-svg');
+  svg.innerHTML = icon(fruit.type, '#C9C4DB');
+  svg.dataset.correct = fruit.color;
+  svg.dataset.hex = fruit.hex;
+  svg.dataset.type = fruit.type;
+  document.getElementById('g3-fruit-name').textContent = fruit.name;
+
+  const otherColors = Object.keys(COLOR_HEX).filter(c=>c!==fruit.color).sort(()=>Math.random()-0.5).slice(0,3);
+  const options = [fruit.color, ...otherColors].sort(()=>Math.random()-0.5);
+
+  const swatchEl = document.getElementById('g3-swatches');
+  swatchEl.innerHTML = '';
+  options.forEach(c=>{
+    const b = document.createElement('button');
+    b.className='swatch-btn';
+    b.style.background = COLOR_HEX[c];
+    b.addEventListener('click', ()=>onG3Pick(b, c, fruit));
+    swatchEl.appendChild(b);
+  });
+}
+function onG3Pick(btn, chosenColor, fruit){
+  if(chosenColor === fruit.color){
+    playCorrect(); showMiniMascot('happy');
+    const svg = document.getElementById('g3-fruit-svg');
+    svg.innerHTML = icon(fruit.type, fruit.hex);
+    const r = btn.getBoundingClientRect();
+    burstConfetti(r.left+r.width/2, r.top+r.height/2, 20);
+    renderStars('g3-stars', Math.min(g3State.round,3));
+    document.querySelectorAll('#g3-swatches .swatch-btn').forEach(b=>b.disabled=true);
+    setTimeout(()=>{
+      if(g3State.round===g3State.totalRounds){
+        showRoundComplete({ title:'Pintar Sekali! 🎉', sub:'Kamu tahu semua warna buah!', stars:3, nextLabel:'Main Lagi', onNext:startG3 });
+      } else {
+        nextG3Round();
+      }
+    }, 900);
+  } else {
+    playWrong(); showMiniMascot('sad');
+    btn.classList.add('wrong-shake');
+    setTimeout(()=>btn.classList.remove('wrong-shake'), 400);
+  }
+}
+</script>
+</body>
+</html>
