@@ -16,6 +16,7 @@
     --sea:#8FDCE3;
     --grape:#C6ACEA;
     --peach:#FFC79B;
+    --mint:#A9E4D8;
     --ink:#5B5468;
     --white:#FFFFFF;
     --shadow: 0 8px 0 rgba(91,84,104,0.14);
@@ -102,6 +103,7 @@
   .card-tebak{ background: var(--peach); }
   .card-bentuk{ background: var(--grass); }
   .card-puzzle{ background: var(--sun); color: var(--ink); }
+  .card-hewan{ background: var(--mint); }
 
   /* ---------- GAME SCREENS SHARED ---------- */
   .topbar{
@@ -377,6 +379,10 @@
         <span class="emoji">🧩</span>
         <span>Puzzle</span>
       </button>
+      <button class="menu-card card-hewan" data-go="hewan">
+        <span class="emoji">🐾</span>
+        <span>Tebak Hewan</span>
+      </button>
     </div>
   </section>
 
@@ -431,6 +437,19 @@
     </div>
     <div class="guess-pill" id="puzzlePrompt">Ayo susun gambar!</div>
     <div class="puzzle-board" id="puzzleBoard" style="--cols:2; --rows:2;"></div>
+  </section>
+
+  <!-- TEBAK HEWAN -->
+  <section id="animalgame" class="screen">
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="btn-back" data-go="menu">←</button>
+        <button class="btn-speak" id="animalSpeakBtn" aria-label="Dengar lagi">🔊</button>
+      </div>
+      <div class="stars-tray" id="animalStars">⭐</div>
+    </div>
+    <div class="guess-pill" id="animalPrompt">Yang mana hewan kucing?</div>
+    <div class="tiles-grid grid-shape" id="animalGrid"></div>
   </section>
 
   <!-- TEBAK BUAH DARI SUARA -->
@@ -1027,6 +1046,89 @@
     speakPuzzlePrompt();
   });
 
+  // ---------------- TEBAK HEWAN ----------------
+  var animalGame = { round: 0, totalRounds: 8, current: null, options: [], usedNames: {} };
+
+  function startAnimalGame(){
+    currentMode = 'hewan';
+    animalGame.round = 0;
+    animalGame.usedNames = {};
+    updateAnimalStars();
+    nextAnimalRound();
+    showScreen('animalgame');
+  }
+
+  function nextAnimalRound(){
+    if(animalGame.round >= animalGame.totalRounds){
+      setTimeout(celebrate, 400);
+      return;
+    }
+    var pool = animals.filter(function(a){ return !animalGame.usedNames[a.name]; });
+    if(pool.length < 4){
+      animalGame.usedNames = {};
+      pool = animals.slice();
+    }
+    shuffle(pool);
+    var options = pool.slice(0, 4);
+    var target = options[Math.floor(Math.random() * options.length)];
+    animalGame.current = target;
+    animalGame.usedNames[target.name] = true;
+    shuffle(options);
+    animalGame.options = options;
+
+    document.getElementById('animalPrompt').textContent = 'Yang mana hewan ' + target.name + '?';
+    renderAnimalOptions();
+    setTimeout(speakAnimalPrompt, 300);
+  }
+
+  function speakAnimalPrompt(){
+    if(!animalGame.current) return;
+    var btn = document.getElementById('animalSpeakBtn');
+    speak('Yang mana hewan ' + animalGame.current.name + '?',
+      function(){ btn.classList.add('speaking'); },
+      function(){ btn.classList.remove('speaking'); }
+    );
+  }
+
+  function renderAnimalOptions(){
+    var grid = document.getElementById('animalGrid');
+    grid.innerHTML = '';
+    animalGame.options.forEach(function(animal){
+      var btn = document.createElement('button');
+      btn.className = 'tile guess-tile';
+      var em = document.createElement('div');
+      em.className = 'guess-emoji';
+      em.textContent = animal.emoji;
+      btn.appendChild(em);
+      btn.addEventListener('click', function(){ onAnimalPick(btn, animal); });
+      grid.appendChild(btn);
+    });
+  }
+
+  function onAnimalPick(btn, animal){
+    if(btn.classList.contains('done')) return;
+    if(animal.name === animalGame.current.name){
+      playCorrect();
+      btn.classList.add('correct-pop', 'done');
+      animalGame.round++;
+      updateAnimalStars();
+      speakPraise(function(){ nextAnimalRound(); });
+    } else {
+      playWrong();
+      btn.classList.remove('wrong-shake');
+      void btn.offsetWidth;
+      btn.classList.add('wrong-shake');
+    }
+  }
+
+  function updateAnimalStars(){
+    document.getElementById('animalStars').textContent = animalGame.round + ' ⭐';
+  }
+
+  document.getElementById('animalSpeakBtn').addEventListener('click', function(){
+    speakAnimalPrompt();
+  });
+
   // ---------------- DENGAR & TEBAK (audio, kategori acak) ----------------
   var animals = [
     { emoji:'🐱', name:'Kucing' },
@@ -1067,7 +1169,26 @@
     { emoji:'🐌', name:'Siput' },
     { emoji:'🦎', name:'Kadal' },
     { emoji:'🦈', name:'Hiu' },
-    { emoji:'🐜', name:'Semut' }
+    { emoji:'🐜', name:'Semut' },
+    { emoji:'🐭', name:'Tikus' },
+    { emoji:'🦛', name:'Kuda Nil' },
+    { emoji:'🦌', name:'Rusa' },
+    { emoji:'🦔', name:'Landak' },
+    { emoji:'🐛', name:'Ulat' },
+    { emoji:'🦃', name:'Kalkun' },
+    { emoji:'🦉', name:'Burung Hantu' },
+    { emoji:'🦅', name:'Elang' },
+    { emoji:'🦩', name:'Flamingo' },
+    { emoji:'🐫', name:'Unta' },
+    { emoji:'🦙', name:'Llama' },
+    { emoji:'🐃', name:'Kerbau' },
+    { emoji:'🦭', name:'Anjing Laut' },
+    { emoji:'🦦', name:'Berang-berang' },
+    { emoji:'🦝', name:'Rakun' },
+    { emoji:'🐆', name:'Macan Tutul' },
+    { emoji:'🐙', name:'Gurita' },
+    { emoji:'🦑', name:'Cumi-cumi' },
+    { emoji:'🦘', name:'Kanguru' }
   ];
   var guessNumberItems = (function(){
     var arr = [];
@@ -1204,6 +1325,7 @@
     if(dest === 'bentuk'){ startShapeGame(); return; }
     if(dest === 'tebak'){ startGuessGame(); return; }
     if(dest === 'puzzle'){ startPuzzleGame(); return; }
+    if(dest === 'hewan'){ startAnimalGame(); return; }
   });
 
   document.getElementById('playAgainBtn').addEventListener('click', function(){
@@ -1217,6 +1339,8 @@
       startGuessGame();
     } else if(currentMode === 'puzzle'){
       startPuzzleGame();
+    } else if(currentMode === 'hewan'){
+      startAnimalGame();
     } else {
       showScreen('menu');
     }
