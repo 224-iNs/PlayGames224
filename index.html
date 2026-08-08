@@ -212,10 +212,13 @@
 
   .color-option{
     display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:10px;
+    width:100%; height:100%;
   }
-  .color-swatch{ width: 46%; aspect-ratio:1/1; border-radius:50%; background: var(--white); box-shadow: inset 0 0 0 6px rgba(255,255,255,0.5); }
-  .color-label{ font-size: clamp(1rem, 3.4vw, 1.4rem); }
+  .color-label{
+    font-size: clamp(1.1rem, 3.8vw, 1.6rem);
+    font-weight:700;
+    text-shadow: 0 2px 0 rgba(255,255,255,0.55);
+  }
 
   /* ---------- TEBAK BUAH (audio) ---------- */
   .guess-pill{
@@ -766,21 +769,15 @@
     options.forEach(function(opt, idx){
       var btn = document.createElement('button');
       btn.className = 'tile palette-' + (idx % 6);
-      btn.style.background = 'transparent';
-      btn.style.boxShadow = 'none';
       var wrap = document.createElement('div');
       wrap.className = 'color-option';
-      var swatch = document.createElement('div');
-      swatch.className = 'color-swatch';
-      swatch.style.background = opt.swatch;
       var label = document.createElement('div');
       label.className = 'color-label';
       label.textContent = opt.color;
       label.style.color = 'var(--ink)';
-      wrap.appendChild(swatch);
       wrap.appendChild(label);
       btn.appendChild(wrap);
-      btn.style.background = '#FFFFFF';
+      btn.style.background = opt.swatch;
       btn.style.boxShadow = '0 8px 0 rgba(91,84,104,0.12)';
       btn.addEventListener('click', function(){ onColorPick(btn, opt.color); });
       grid.appendChild(btn);
