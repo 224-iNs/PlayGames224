@@ -62,11 +62,12 @@
   #menu .title{
     font-family:'Baloo 2', sans-serif;
     font-weight:800;
-    font-size: clamp(2.2rem, 8vw, 4rem);
+    font-size: clamp(1.7rem, 6.5vw, 3.4rem);
     color: var(--ink);
     margin: 0 0 .2em 0;
     text-align:center;
     letter-spacing: -0.02em;
+    max-width: 90vw;
   }
   #menu .title span{ color: var(--berry); }
   #menu .subtitle{
@@ -76,6 +77,16 @@
     margin-bottom: 5vh;
     text-align:center;
   }
+  .btn-music{
+    position:absolute; top: max(16px, env(safe-area-inset-top)); right: 4vw;
+    width:52px; height:52px; border-radius:50%; border:none;
+    background: var(--white); color: var(--ink);
+    font-size:1.3rem; display:flex; align-items:center; justify-content:center;
+    box-shadow: 0 5px 0 rgba(91,84,104,0.15);
+    cursor:pointer; z-index:6;
+  }
+  .btn-music:active{ transform: translateY(4px); box-shadow:none; }
+  .btn-music.muted{ opacity:.55; }
   .menu-grid{
     display:flex; gap: clamp(16px, 3vw, 28px);
     flex-wrap:wrap; justify-content:center; max-width: 900px;
@@ -355,8 +366,9 @@
 
   <!-- MENU -->
   <section id="menu" class="screen active">
-    <h1 class="title">Ayo <span>Belajar!</span> 🎈</h1>
-    <p class="subtitle">Pilih permainan yang mau dimainkan</p>
+    <button class="btn-music" id="musicToggleBtn" aria-label="Musik">🎵</button>
+    <h1 class="title">Ayo Bermain Sambil <span>Belajar</span></h1>
+    <p class="subtitle">Pilih Permainan Yang Mau Dimainkan Ya</p>
     <div class="menu-grid">
       <button class="menu-card card-angka" data-go="angka">
         <span class="emoji">🔢</span>
@@ -512,6 +524,111 @@
   function playWrong(){ beep(220, 0.18, 'sine', 0); }
   function playWin(){ beep(523.25,0.12,'sine',0); beep(659.25,0.12,'sine',0.12); beep(783.99,0.12,'sine',0.24); beep(1046.5,0.22,'sine',0.36); }
 
+  // ---- cheerful looping background music (original, procedurally generated — no external file) ----
+  var musicGainNode = null;
+  var musicEnabled = true;
+  var musicStarted = false;
+  var musicTimer = null;
+
+  function musicBus(){
+    if(!musicGainNode){
+      musicGainNode = ctx().createGain();
+      musicGainNode.gain.value = 0.055;
+      musicGainNode.connect(ctx().destination);
+    }
+    return musicGainNode;
+  }
+
+  function playMusicNote(freq, dur, startDelay, peakGain){
+    try{
+      var c = ctx();
+      var o = c.createOscillator();
+      var g = c.createGain();
+      o.type = 'triangle';
+      o.frequency.value = freq;
+      var bus = musicBus();
+      o.connect(g); g.connect(bus);
+      var t0 = c.currentTime + startDelay;
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(peakGain || 0.9, t0 + 0.04);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.start(t0);
+      o.stop(t0 + dur + 0.02);
+    }catch(e){ /* audio not available, ignore */ }
+  }
+
+  // a simple bouncy major-key melody (C major), repeats in a loop
+  var bgMelody = [
+    { f:523.25, d:0.26 }, { f:659.25, d:0.26 }, { f:783.99, d:0.26 }, { f:659.25, d:0.26 },
+    { f:587.33, d:0.26 }, { f:698.46, d:0.26 }, { f:880.00, d:0.38 }, { f:698.46, d:0.38 }
+  ];
+  var bgBassNotes = [
+    { f:261.63, d:1.04 }, { f:349.23, d:1.28 }
+  ];
+
+  function scheduleMusicLoop(){
+    if(!musicEnabled) return;
+    var t = 0;
+    bgMelody.forEach(function(note){
+      playMusicNote(note.f, note.d * 0.85, t, 0.75);
+      t += note.d;
+    });
+    var bassT = 0;
+    bgBassNotes.forEach(function(note){
+      playMusicNote(note.f, note.d * 0.9, bassT, 0.35);
+      bassT += note.d;
+    });
+    musicTimer = setTimeout(scheduleMusicLoop, t * 1000);
+  }
+
+  function startMusic(){
+    musicEnabled = true;
+    if(musicTimer){ clearTimeout(musicTimer); musicTimer = null; }
+    scheduleMusicLoop();
+  }
+
+  function stopMusic(){
+    musicEnabled = false;
+    if(musicTimer){ clearTimeout(musicTimer); musicTimer = null; }
+  }
+
+  function duckMusic(){
+    if(musicGainNode){
+      try{ musicGainNode.gain.linearRampToValueAtTime(0.015, ctx().currentTime + 0.15); }catch(e){}
+    }
+  }
+  function unduckMusic(){
+    if(musicGainNode && musicEnabled){
+      try{ musicGainNode.gain.linearRampToValueAtTime(0.055, ctx().currentTime + 0.4); }catch(e){}
+    }
+  }
+
+  function updateMusicButtonUI(){
+    var btn = document.getElementById('musicToggleBtn');
+    if(!btn) return;
+    btn.textContent = musicEnabled ? '🎵' : '🔇';
+    btn.classList.toggle('muted', !musicEnabled);
+  }
+
+  var musicBtnEl = document.getElementById('musicToggleBtn');
+  if(musicBtnEl){
+    musicBtnEl.addEventListener('click', function(e){
+      e.stopPropagation();
+      musicStarted = true;
+      if(musicEnabled){ stopMusic(); } else { startMusic(); }
+      updateMusicButtonUI();
+    });
+  }
+
+  // browsers require a user gesture before audio can play — start on first tap anywhere
+  document.addEventListener('click', function(){
+    if(!musicStarted){
+      musicStarted = true;
+      if(musicEnabled){ startMusic(); }
+      updateMusicButtonUI();
+    }
+  });
+
   // ---- speech (text-to-speech) for "Dengar & Tebak" game ----
   var speechSupported = ('speechSynthesis' in window);
   var idVoice = null;
@@ -547,9 +664,9 @@
       // natural, gentle children's voice — clear and warm, not exaggerated or shrill
       utter.rate = 0.86 + Math.random() * 0.06;
       utter.pitch = 1.12 + Math.random() * 0.1;
-      utter.onstart = function(){ if(onStart) onStart(); };
-      utter.onend = function(){ if(onEnd) onEnd(); };
-      utter.onerror = function(){ if(onEnd) onEnd(); };
+      utter.onstart = function(){ duckMusic(); if(onStart) onStart(); };
+      utter.onend = function(){ unduckMusic(); if(onEnd) onEnd(); };
+      utter.onerror = function(){ unduckMusic(); if(onEnd) onEnd(); };
       window.speechSynthesis.speak(utter);
     }catch(e){ if(onEnd) onEnd(); }
   }
