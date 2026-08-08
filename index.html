@@ -100,6 +100,7 @@
   .card-huruf{ background: var(--sea); }
   .card-warna{ background: var(--grape); }
   .card-tebak{ background: var(--peach); }
+  .card-bentuk{ background: var(--grass); }
 
   /* ---------- GAME SCREENS SHARED ---------- */
   .topbar{
@@ -251,6 +252,16 @@
     font-size: .95rem; color: var(--ink); opacity:.55; margin-top: 2vh; text-align:center; max-width: 80vw;
   }
 
+  /* ---------- TEBAK GAMBAR (bentuk) ---------- */
+  .tiles-grid.grid-shape{ grid-template-columns: repeat(2, 1fr); width: min(84vw, 420px); }
+  .shape-visual{ width:60%; height:60%; }
+  .shape-circle{ border-radius:50%; }
+  .shape-square{ width:58%; height:58%; border-radius:16%; }
+  .shape-rect{ width:76%; height:44%; border-radius:12%; }
+  .shape-triangle{ clip-path: polygon(50% 0%, 0% 100%, 100% 100%); }
+  .shape-star{ clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
+  .shape-heart{ clip-path: polygon(50% 15%, 61% 3%, 75% 0%, 89% 3%, 97% 15%, 100% 30%, 96% 45%, 90% 58%, 80% 70%, 50% 95%, 20% 70%, 10% 58%, 4% 45%, 0% 30%, 3% 15%, 11% 3%, 25% 0%, 39% 3%); }
+
   /* ---------- CELEBRATION ---------- */
   #celebrate{
     background: rgba(255,244,224,0.97);
@@ -319,6 +330,10 @@
         <span class="emoji">🍎</span>
         <span>Warna Buah</span>
       </button>
+      <button class="menu-card card-bentuk" data-go="bentuk">
+        <span class="emoji">🔺</span>
+        <span>Tebak Gambar</span>
+      </button>
       <button class="menu-card card-tebak" data-go="tebak">
         <span class="emoji">🔊</span>
         <span>Dengar &amp; Tebak</span>
@@ -351,6 +366,19 @@
     <div class="fruit-big" id="fruitEmoji">🍌</div>
     <div class="prompt" id="colorPrompt">Ini warnanya apa?</div>
     <div class="tiles-grid grid-warna" id="colorGrid"></div>
+  </section>
+
+  <!-- TEBAK GAMBAR (BENTUK) -->
+  <section id="shapegame" class="screen">
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="btn-back" data-go="menu">←</button>
+        <button class="btn-speak" id="shapeSpeakBtn" aria-label="Dengar lagi">🔊</button>
+      </div>
+      <div class="stars-tray" id="shapeStars">⭐</div>
+    </div>
+    <div class="guess-pill" id="shapePrompt">Yang mana gambar lingkaran?</div>
+    <div class="tiles-grid grid-shape" id="shapeGrid"></div>
   </section>
 
   <!-- TEBAK BUAH DARI SUARA -->
@@ -712,6 +740,93 @@
     }
   }
 
+  // ---------------- TEBAK GAMBAR (bentuk) ----------------
+  var shapes = [
+    { key:'lingkaran', name:'Lingkaran', cls:'shape-circle' },
+    { key:'persegi', name:'Persegi', cls:'shape-square' },
+    { key:'persegi-panjang', name:'Persegi Panjang', cls:'shape-rect' },
+    { key:'segitiga', name:'Segitiga', cls:'shape-triangle' },
+    { key:'bintang', name:'Bintang', cls:'shape-star' },
+    { key:'hati', name:'Hati', cls:'shape-heart' }
+  ];
+  var shapePalette = ['var(--berry)','var(--sea)','var(--sun)','var(--grass)','var(--grape)','var(--peach)'];
+
+  var shapeGame = { round: 0, totalRounds: 8, current: null, options: [] };
+
+  function startShapeGame(){
+    currentMode = 'bentuk';
+    shapeGame.round = 0;
+    updateShapeStars();
+    nextShapeRound();
+    showScreen('shapegame');
+  }
+
+  function nextShapeRound(){
+    if(shapeGame.round >= shapeGame.totalRounds){
+      setTimeout(celebrate, 400);
+      return;
+    }
+    var pool = shapes.slice();
+    shuffle(pool);
+    var options = pool.slice(0, 4);
+    var target = options[Math.floor(Math.random() * options.length)];
+    shapeGame.current = target;
+    shuffle(options);
+    shapeGame.options = options;
+
+    document.getElementById('shapePrompt').textContent = 'Yang mana gambar ' + target.name + '?';
+    renderShapeOptions();
+    setTimeout(speakShapePrompt, 300);
+  }
+
+  function speakShapePrompt(){
+    if(!shapeGame.current) return;
+    var btn = document.getElementById('shapeSpeakBtn');
+    speak('Yang mana gambar ' + shapeGame.current.name + '?',
+      function(){ btn.classList.add('speaking'); },
+      function(){ btn.classList.remove('speaking'); }
+    );
+  }
+
+  function renderShapeOptions(){
+    var grid = document.getElementById('shapeGrid');
+    grid.innerHTML = '';
+    shapeGame.options.forEach(function(shape, idx){
+      var btn = document.createElement('button');
+      btn.className = 'tile guess-tile';
+      var shapeEl = document.createElement('div');
+      shapeEl.className = 'shape-visual ' + shape.cls;
+      shapeEl.style.background = shapePalette[idx % shapePalette.length];
+      btn.appendChild(shapeEl);
+      btn.addEventListener('click', function(){ onShapePick(btn, shape); });
+      grid.appendChild(btn);
+    });
+  }
+
+  function onShapePick(btn, shape){
+    if(btn.classList.contains('done')) return;
+    if(shape.key === shapeGame.current.key){
+      playCorrect();
+      btn.classList.add('correct-pop', 'done');
+      shapeGame.round++;
+      updateShapeStars();
+      speakPraise(function(){ nextShapeRound(); });
+    } else {
+      playWrong();
+      btn.classList.remove('wrong-shake');
+      void btn.offsetWidth;
+      btn.classList.add('wrong-shake');
+    }
+  }
+
+  function updateShapeStars(){
+    document.getElementById('shapeStars').textContent = shapeGame.round + ' ⭐';
+  }
+
+  document.getElementById('shapeSpeakBtn').addEventListener('click', function(){
+    speakShapePrompt();
+  });
+
   // ---------------- DENGAR & TEBAK (audio, kategori acak) ----------------
   var animals = [
     { emoji:'🐱', name:'Kucing' },
@@ -861,6 +976,7 @@
     }
     if(dest === 'angka' || dest === 'huruf'){ startSequence(dest); return; }
     if(dest === 'warna'){ startColorGame(); return; }
+    if(dest === 'bentuk'){ startShapeGame(); return; }
     if(dest === 'tebak'){ startGuessGame(); return; }
   });
 
@@ -869,6 +985,8 @@
       startSequence(currentMode);
     } else if(currentMode === 'warna'){
       startColorGame();
+    } else if(currentMode === 'bentuk'){
+      startShapeGame();
     } else if(currentMode === 'tebak'){
       startGuessGame();
     } else {
