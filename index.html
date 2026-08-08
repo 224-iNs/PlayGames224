@@ -101,6 +101,7 @@
   .card-warna{ background: var(--grape); }
   .card-tebak{ background: var(--peach); }
   .card-bentuk{ background: var(--grass); }
+  .card-puzzle{ background: var(--sun); color: var(--ink); }
 
   /* ---------- GAME SCREENS SHARED ---------- */
   .topbar{
@@ -262,6 +263,40 @@
   .shape-star{ clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
   .shape-heart{ clip-path: polygon(50% 15%, 61% 3%, 75% 0%, 89% 3%, 97% 15%, 100% 30%, 96% 45%, 90% 58%, 80% 70%, 50% 95%, 20% 70%, 10% 58%, 4% 45%, 0% 30%, 3% 15%, 11% 3%, 25% 0%, 39% 3%); }
 
+  /* ---------- PUZZLE HEWAN & BUAH ---------- */
+  .puzzle-board{
+    display:grid;
+    grid-template-columns: repeat(var(--cols), 1fr);
+    grid-template-rows: repeat(var(--rows), 1fr);
+    gap: 10px;
+    width: min(78vw, 320px);
+    height: min(78vw, 320px);
+    background: var(--white);
+    border-radius: 26px;
+    padding: 12px;
+    box-shadow: var(--shadow);
+  }
+  .puzzle-piece{
+    position:relative; overflow:hidden;
+    border-radius: 16px; border: 3px solid rgba(91,84,104,0.12);
+    background: var(--sky);
+    cursor:pointer; padding:0;
+    transition: transform .12s ease, border-color .2s ease;
+  }
+  .puzzle-piece:active{ transform: scale(0.94); }
+  .puzzle-piece.selected{ border-color: var(--berry); border-width:4px; }
+  .puzzle-piece.correct{ border-color: var(--grass); border-width:4px; }
+  .puzzle-piece-inner{
+    position:absolute;
+    display:flex; align-items:center; justify-content:center;
+    width: calc(var(--cols) * 100%);
+    height: calc(var(--rows) * 100%);
+    left: calc(var(--pc, 0) * -100%);
+    top: calc(var(--pr, 0) * -100%);
+    font-size: clamp(3.2rem, 22vw, 6.5rem);
+    pointer-events:none;
+  }
+
   /* ---------- CELEBRATION ---------- */
   #celebrate{
     background: rgba(255,244,224,0.97);
@@ -338,6 +373,10 @@
         <span class="emoji">🔊</span>
         <span>Dengar &amp; Tebak</span>
       </button>
+      <button class="menu-card card-puzzle" data-go="puzzle">
+        <span class="emoji">🧩</span>
+        <span>Puzzle</span>
+      </button>
     </div>
   </section>
 
@@ -379,6 +418,19 @@
     </div>
     <div class="guess-pill" id="shapePrompt">Yang mana gambar lingkaran?</div>
     <div class="tiles-grid grid-shape" id="shapeGrid"></div>
+  </section>
+
+  <!-- PUZZLE HEWAN & BUAH -->
+  <section id="puzzlegame" class="screen">
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="btn-back" data-go="menu">←</button>
+        <button class="btn-speak" id="puzzleSpeakBtn" aria-label="Dengar lagi">🔊</button>
+      </div>
+      <div class="stars-tray" id="puzzleStars">⭐</div>
+    </div>
+    <div class="guess-pill" id="puzzlePrompt">Ayo susun gambar!</div>
+    <div class="puzzle-board" id="puzzleBoard" style="--cols:2; --rows:2;"></div>
   </section>
 
   <!-- TEBAK BUAH DARI SUARA -->
@@ -630,7 +682,16 @@
     { emoji:'🥝', name:'Kiwi', color:'Hijau', swatch:'#B3E8B8' },
     { emoji:'🫐', name:'Blueberry', color:'Biru', swatch:'#9DCBF0' },
     { emoji:'🍋', name:'Lemon', color:'Kuning', swatch:'#FFE18C' },
-    { emoji:'🍑', name:'Persik', color:'Oranye', swatch:'#FFC79B' }
+    { emoji:'🍑', name:'Persik', color:'Oranye', swatch:'#FFC79B' },
+    { emoji:'🥑', name:'Alpukat', color:'Hijau', swatch:'#B3E8B8' },
+    { emoji:'🍍', name:'Nanas', color:'Kuning', swatch:'#FFE18C' },
+    { emoji:'🍓', name:'Stroberi', color:'Merah', swatch:'#FFA3A3' },
+    { emoji:'🍒', name:'Ceri', color:'Merah', swatch:'#FFA3A3' },
+    { emoji:'🍈', name:'Melon', color:'Hijau', swatch:'#B3E8B8' },
+    { emoji:'🍐', name:'Pir', color:'Kuning', swatch:'#FFE18C' },
+    { emoji:'🍏', name:'Apel Hijau', color:'Hijau', swatch:'#B3E8B8' },
+    { emoji:'🍅', name:'Tomat', color:'Merah', swatch:'#FFA3A3' },
+    { emoji:'🥭', name:'Mangga', color:'Kuning', swatch:'#FFE18C' }
   ];
   var allColors = [
     { name:'Merah', swatch:'#FFA3A3' },
@@ -827,6 +888,145 @@
     speakShapePrompt();
   });
 
+  // ---------------- PUZZLE HEWAN & BUAH ----------------
+  var puzzleGame = {
+    round: 0, totalRounds: 6, current: null,
+    cols: 2, rows: 2,
+    slots: [], selectedSlot: null, usedNames: {}
+  };
+
+  function buildPuzzlePool(){
+    var pool = [];
+    animals.forEach(function(a){ pool.push({ emoji:a.emoji, name:a.name }); });
+    fruits.forEach(function(f){ pool.push({ emoji:f.emoji, name:f.name }); });
+    return pool;
+  }
+
+  function createPuzzlePieces(cols, rows){
+    var pieces = [];
+    for(var r = 0; r < rows; r++){
+      for(var c = 0; c < cols; c++){
+        pieces.push({ row:r, col:c });
+      }
+    }
+    return pieces;
+  }
+
+  function isPuzzleSolvedArrangement(slots, cols){
+    for(var i = 0; i < slots.length; i++){
+      var slotRow = Math.floor(i / cols), slotCol = i % cols;
+      if(slots[i].row !== slotRow || slots[i].col !== slotCol) return false;
+    }
+    return true;
+  }
+
+  function startPuzzleGame(){
+    currentMode = 'puzzle';
+    puzzleGame.round = 0;
+    puzzleGame.usedNames = {};
+    updatePuzzleStars();
+    nextPuzzleRound();
+    showScreen('puzzlegame');
+  }
+
+  function nextPuzzleRound(){
+    if(puzzleGame.round >= puzzleGame.totalRounds){
+      setTimeout(celebrate, 400);
+      return;
+    }
+    var pool = buildPuzzlePool().filter(function(item){ return !puzzleGame.usedNames[item.name]; });
+    if(pool.length === 0){
+      puzzleGame.usedNames = {};
+      pool = buildPuzzlePool();
+    }
+    var item = pool[Math.floor(Math.random() * pool.length)];
+    puzzleGame.usedNames[item.name] = true;
+    puzzleGame.current = item;
+
+    document.getElementById('puzzlePrompt').textContent = 'Ayo susun gambar ' + item.name + '!';
+    setupPuzzleBoard();
+    setTimeout(speakPuzzlePrompt, 300);
+  }
+
+  function speakPuzzlePrompt(){
+    if(!puzzleGame.current) return;
+    var btn = document.getElementById('puzzleSpeakBtn');
+    speak('Ayo susun gambar ' + puzzleGame.current.name + '!',
+      function(){ btn.classList.add('speaking'); },
+      function(){ btn.classList.remove('speaking'); }
+    );
+  }
+
+  function setupPuzzleBoard(){
+    var cols = puzzleGame.cols, rows = puzzleGame.rows;
+    var pieces = createPuzzlePieces(cols, rows);
+    var slots;
+    do{
+      slots = pieces.slice();
+      shuffle(slots);
+    } while(isPuzzleSolvedArrangement(slots, cols));
+    puzzleGame.slots = slots;
+    puzzleGame.selectedSlot = null;
+    renderPuzzleBoard();
+  }
+
+  function renderPuzzleBoard(){
+    var board = document.getElementById('puzzleBoard');
+    var cols = puzzleGame.cols, rows = puzzleGame.rows;
+    board.style.setProperty('--cols', cols);
+    board.style.setProperty('--rows', rows);
+    board.innerHTML = '';
+    puzzleGame.slots.forEach(function(piece, idx){
+      var slotRow = Math.floor(idx / cols), slotCol = idx % cols;
+      var btn = document.createElement('button');
+      btn.className = 'puzzle-piece';
+      if(piece.row === slotRow && piece.col === slotCol){ btn.classList.add('correct'); }
+      if(puzzleGame.selectedSlot === idx){ btn.classList.add('selected'); }
+      var inner = document.createElement('div');
+      inner.className = 'puzzle-piece-inner';
+      inner.style.setProperty('--pc', piece.col);
+      inner.style.setProperty('--pr', piece.row);
+      inner.textContent = puzzleGame.current.emoji;
+      btn.appendChild(inner);
+      btn.addEventListener('click', function(){ onPuzzlePieceClick(idx); });
+      board.appendChild(btn);
+    });
+  }
+
+  function onPuzzlePieceClick(idx){
+    if(puzzleGame.selectedSlot === null){
+      puzzleGame.selectedSlot = idx;
+      renderPuzzleBoard();
+      return;
+    }
+    if(puzzleGame.selectedSlot === idx){
+      puzzleGame.selectedSlot = null;
+      renderPuzzleBoard();
+      return;
+    }
+    var a = puzzleGame.selectedSlot, b = idx;
+    var tmp = puzzleGame.slots[a];
+    puzzleGame.slots[a] = puzzleGame.slots[b];
+    puzzleGame.slots[b] = tmp;
+    puzzleGame.selectedSlot = null;
+    renderPuzzleBoard();
+
+    if(isPuzzleSolvedArrangement(puzzleGame.slots, puzzleGame.cols)){
+      playCorrect();
+      puzzleGame.round++;
+      updatePuzzleStars();
+      speakPraise(function(){ nextPuzzleRound(); });
+    }
+  }
+
+  function updatePuzzleStars(){
+    document.getElementById('puzzleStars').textContent = puzzleGame.round + ' ⭐';
+  }
+
+  document.getElementById('puzzleSpeakBtn').addEventListener('click', function(){
+    speakPuzzlePrompt();
+  });
+
   // ---------------- DENGAR & TEBAK (audio, kategori acak) ----------------
   var animals = [
     { emoji:'🐱', name:'Kucing' },
@@ -842,7 +1042,32 @@
     { emoji:'🦋', name:'Kupu-kupu' },
     { emoji:'🐐', name:'Kambing' },
     { emoji:'🐦', name:'Burung' },
-    { emoji:'🐴', name:'Kuda' }
+    { emoji:'🐴', name:'Kuda' },
+    { emoji:'🐯', name:'Harimau' },
+    { emoji:'🐻', name:'Beruang' },
+    { emoji:'🐼', name:'Panda' },
+    { emoji:'🐵', name:'Monyet' },
+    { emoji:'🐷', name:'Babi' },
+    { emoji:'🐑', name:'Domba' },
+    { emoji:'🦊', name:'Rubah' },
+    { emoji:'🐺', name:'Serigala' },
+    { emoji:'🦓', name:'Zebra' },
+    { emoji:'🦒', name:'Jerapah' },
+    { emoji:'🐊', name:'Buaya' },
+    { emoji:'🐍', name:'Ular' },
+    { emoji:'🐢', name:'Kura-kura' },
+    { emoji:'🐝', name:'Lebah' },
+    { emoji:'🐿️', name:'Tupai' },
+    { emoji:'🐨', name:'Koala' },
+    { emoji:'🦚', name:'Merak' },
+    { emoji:'🐧', name:'Penguin' },
+    { emoji:'🐬', name:'Lumba-lumba' },
+    { emoji:'🐳', name:'Paus' },
+    { emoji:'🦀', name:'Kepiting' },
+    { emoji:'🐌', name:'Siput' },
+    { emoji:'🦎', name:'Kadal' },
+    { emoji:'🦈', name:'Hiu' },
+    { emoji:'🐜', name:'Semut' }
   ];
   var guessNumberItems = (function(){
     var arr = [];
@@ -978,6 +1203,7 @@
     if(dest === 'warna'){ startColorGame(); return; }
     if(dest === 'bentuk'){ startShapeGame(); return; }
     if(dest === 'tebak'){ startGuessGame(); return; }
+    if(dest === 'puzzle'){ startPuzzleGame(); return; }
   });
 
   document.getElementById('playAgainBtn').addEventListener('click', function(){
@@ -989,6 +1215,8 @@
       startShapeGame();
     } else if(currentMode === 'tebak'){
       startGuessGame();
+    } else if(currentMode === 'puzzle'){
+      startPuzzleGame();
     } else {
       showScreen('menu');
     }
