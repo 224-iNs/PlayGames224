@@ -442,13 +442,26 @@
       utter.lang = 'id-ID';
       if(idVoice) utter.voice = idVoice;
       // slight randomization each time keeps the voice from sounding flat/repetitive
-      utter.rate = 0.84 + Math.random() * 0.08;
-      utter.pitch = 1.08 + Math.random() * 0.12;
+      // natural, gentle children's voice — clear and warm, not exaggerated or shrill
+      utter.rate = 0.86 + Math.random() * 0.06;
+      utter.pitch = 1.12 + Math.random() * 0.1;
       utter.onstart = function(){ if(onStart) onStart(); };
       utter.onend = function(){ if(onEnd) onEnd(); };
       utter.onerror = function(){ if(onEnd) onEnd(); };
       window.speechSynthesis.speak(utter);
     }catch(e){ if(onEnd) onEnd(); }
+  }
+
+  // cheerful praise cheers spoken after every correct answer, across all games
+  var praisePhrases = ['Hebat!', 'Betul sekali!', 'Pintar!', 'Wah, bagus!', 'Iya, benar!', 'Pintar sekali!'];
+  function speakPraise(onDone){
+    var phrase = praisePhrases[Math.floor(Math.random() * praisePhrases.length)];
+    var minDelay = 450;
+    var start = Date.now();
+    speak(phrase, null, function(){
+      var wait = Math.max(0, minDelay - (Date.now() - start));
+      setTimeout(function(){ if(onDone) onDone(); }, wait);
+    });
   }
 
   function shuffle(arr){
@@ -539,7 +552,8 @@
   function speakSeqPrompt(){
     var label = seq.mode === 'angka' ? 'angka' : 'huruf';
     var btn = document.getElementById('seqSpeakBtn');
-    speak('Cari ' + label + ' ' + seq.items[seq.index],
+    var pep = ['Ayo cari ', 'Yuk cari ', 'Coba cari '][Math.floor(Math.random() * 3)];
+    speak(pep + label + ' ' + seq.items[seq.index] + '!',
       function(){ btn.classList.add('speaking'); },
       function(){ btn.classList.remove('speaking'); }
     );
@@ -564,7 +578,7 @@
       if(seq.index >= seq.items.length){
         setTimeout(celebrate, 500);
       } else {
-        updateSeqPrompt();
+        speakPraise(function(){ updateSeqPrompt(); });
       }
     } else {
       playWrong();
@@ -672,7 +686,7 @@
   function speakColorPrompt(){
     if(!colorGame.current) return;
     var btn = document.getElementById('colorSpeakBtn');
-    speak(colorGame.current.name + ' ini warnanya apa?',
+    speak(colorGame.current.name + ' ini warnanya apa ya?',
       function(){ btn.classList.add('speaking'); },
       function(){ btn.classList.remove('speaking'); }
     );
@@ -689,7 +703,7 @@
       btn.classList.add('correct-pop');
       colorGame.round++;
       updateColorStars();
-      setTimeout(nextColorRound, 550);
+      speakPraise(function(){ nextColorRound(); });
     } else {
       playWrong();
       btn.classList.remove('wrong-shake');
@@ -735,7 +749,9 @@
     'Yang mana {word} {name}?',
     'Coba cari {word} {name}?',
     'Ayo tunjukkan {word} {name}?',
-    'Dimana {word} {name} ya?'
+    'Dimana {word} {name} ya?',
+    'Yuk, sentuh {word} {name}!',
+    'Hayo, mana {word} {name}?'
   ];
 
   var guessGame = { round: 0, totalRounds: 8, current: null, options: [], categoryRender: 'emoji', promptText: '' };
@@ -816,7 +832,7 @@
       btn.classList.add('correct-pop', 'done');
       guessGame.round++;
       updateGuessStars();
-      setTimeout(nextGuessRound, 700);
+      speakPraise(function(){ nextGuessRound(); });
     } else {
       playWrong();
       btn.classList.remove('wrong-shake');
