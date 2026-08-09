@@ -163,35 +163,88 @@
     text-align:center;
     margin: 4px 0 22px 0;
   }
-  .menu-grid{
-    display:flex; gap: clamp(16px, 3vw, 28px);
-    flex-wrap:wrap; justify-content:center; max-width: 900px;
+
+  /* ---------- ORBIT GAME PICKER (BKN-style radial layout) ---------- */
+  .orbit-wrap{
+    position:relative;
+    display:flex; flex-wrap:wrap; gap: 16px;
+    justify-content:center; align-items:center;
+    padding: 6px 0 4px;
   }
-  .menu-card{
-    width: clamp(150px, 28vw, 240px);
-    height: clamp(170px, 30vw, 260px);
-    border:none; border-radius: 32px;
+  .orbit-center{
+    width: clamp(96px, 20vw, 128px);
+    height: clamp(96px, 20vw, 128px);
+    border-radius:50%;
+    background: radial-gradient(circle at 35% 30%, #ffffff 0%, #fdf3e4 75%);
+    border: 4px solid var(--berry);
     display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap: 10px;
+    box-shadow: 0 8px 0 rgba(91,84,104,0.14);
+    order: -1;
+    flex-basis: 100%;
+    margin: 0 auto 4px;
+  }
+  .orbit-center-emoji{ font-size: clamp(2rem, 6.5vw, 2.7rem); line-height:1; }
+  .orbit-center-label{
+    font-family:'Baloo 2', sans-serif; font-weight:800;
+    font-size: clamp(0.8rem, 2.8vw, 1rem);
+    color: var(--berry);
+    margin-top: 2px;
+  }
+  .orbit-card{
+    width: clamp(94px, 23vw, 128px);
+    height: clamp(94px, 23vw, 128px);
+    border-radius:50%;
+    border: 3px solid var(--ring-color, var(--berry));
+    background: radial-gradient(circle at 35% 30%, #ffffff 0%, #fdf7ee 78%);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap: 3px;
     cursor:pointer;
-    font-family:'Baloo 2', sans-serif;
-    font-weight:700;
-    font-size: clamp(1.1rem, 3vw, 1.5rem);
-    color: var(--white);
-    box-shadow: var(--shadow);
-    transform: translateY(0);
+    padding: 6px;
+    text-align:center;
+    box-shadow: 0 6px 0 rgba(91,84,104,0.13);
     transition: transform .12s ease, box-shadow .12s ease;
   }
-  .menu-card:active{ transform: translateY(6px); box-shadow: 0 2px 0 rgba(91,84,104,0.15); }
-  .menu-card .emoji{ font-size: clamp(2.8rem, 8vw, 4rem); }
-  .card-angka{ background: var(--berry); }
-  .card-huruf{ background: var(--sea); }
-  .card-warna{ background: var(--grape); }
-  .card-tebak{ background: var(--peach); }
-  .card-bentuk{ background: var(--grass); }
-  .card-puzzle{ background: var(--sun); color: var(--ink); }
-  .card-hewan{ background: var(--mint); }
-  .card-transportasi{ background: var(--skyblue); }
+  .orbit-card:active{ transform: translateY(4px); box-shadow: 0 2px 0 rgba(91,84,104,0.13); }
+  .orbit-card .emoji{ font-size: clamp(1.5rem, 5.5vw, 2.1rem); line-height:1; }
+  .orbit-card .label{
+    font-family:'Baloo 2', sans-serif; font-weight:700;
+    font-size: clamp(0.66rem, 2.3vw, 0.82rem);
+    color: var(--ink);
+    line-height:1.15;
+  }
+  .card-angka{ --ring-color: var(--berry); }
+  .card-huruf{ --ring-color: var(--sea); }
+  .card-warna{ --ring-color: var(--grape); }
+  .card-tebak{ --ring-color: var(--peach); }
+  .card-bentuk{ --ring-color: var(--grass); }
+  .card-puzzle{ --ring-color: var(--sun); }
+  .card-hewan{ --ring-color: var(--mint); }
+  .card-transportasi{ --ring-color: var(--skyblue); }
+
+  @media (min-width: 700px){
+    .orbit-wrap{
+      display:block;
+      width: min(600px, 88vw);
+      aspect-ratio: 1 / 1;
+      margin: 6px auto 4px;
+    }
+    .orbit-center{
+      position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+      margin:0; flex-basis:auto;
+    }
+    .orbit-card{
+      position:absolute; transform:translate(-50%,-50%);
+    }
+    .orbit-card:active{ transform:translate(-50%,-50%) translateY(4px); }
+    .orbit-1{ top:9%;  left:50%; }
+    .orbit-2{ top:23%; left:79%; }
+    .orbit-3{ top:50%; left:93%; }
+    .orbit-4{ top:77%; left:79%; }
+    .orbit-5{ top:91%; left:50%; }
+    .orbit-6{ top:77%; left:21%; }
+    .orbit-7{ top:50%; left:7%;  }
+    .orbit-8{ top:23%; left:21%; }
+  }
 
   /* ---------- GAME SCREENS SHARED ---------- */
   .topbar{
@@ -458,38 +511,42 @@
     <div class="modal-panel">
       <button class="modal-close" id="closeGameModalBtn" aria-label="Tutup">✕</button>
       <p class="modal-title">Silahkan pilih dulu ya</p>
-      <div class="menu-grid">
-        <button class="menu-card card-angka" data-go="angka">
+      <div class="orbit-wrap">
+        <div class="orbit-center">
+          <span class="orbit-center-emoji">🎈</span>
+          <span class="orbit-center-label">Ayo Main!</span>
+        </div>
+        <button class="orbit-card card-angka orbit-1" data-go="angka">
           <span class="emoji">🔢</span>
-          <span>Angka</span>
+          <span class="label">Angka</span>
         </button>
-        <button class="menu-card card-huruf" data-go="huruf">
+        <button class="orbit-card card-huruf orbit-2" data-go="huruf">
           <span class="emoji">🔤</span>
-          <span>Huruf</span>
+          <span class="label">Huruf</span>
         </button>
-        <button class="menu-card card-warna" data-go="warna">
+        <button class="orbit-card card-warna orbit-3" data-go="warna">
           <span class="emoji">🍎</span>
-          <span>Warna Buah</span>
+          <span class="label">Warna Buah</span>
         </button>
-        <button class="menu-card card-bentuk" data-go="bentuk">
+        <button class="orbit-card card-bentuk orbit-4" data-go="bentuk">
           <span class="emoji">🔺</span>
-          <span>Tebak Gambar</span>
+          <span class="label">Tebak Gambar</span>
         </button>
-        <button class="menu-card card-tebak" data-go="tebak">
+        <button class="orbit-card card-tebak orbit-5" data-go="tebak">
           <span class="emoji">🔊</span>
-          <span>Dengar &amp; Tebak</span>
+          <span class="label">Dengar &amp; Tebak</span>
         </button>
-        <button class="menu-card card-puzzle" data-go="puzzle">
+        <button class="orbit-card card-puzzle orbit-6" data-go="puzzle">
           <span class="emoji">🧩</span>
-          <span>Puzzle</span>
+          <span class="label">Puzzle</span>
         </button>
-        <button class="menu-card card-hewan" data-go="hewan">
+        <button class="orbit-card card-hewan orbit-7" data-go="hewan">
           <span class="emoji">🐾</span>
-          <span>Tebak Hewan</span>
+          <span class="label">Tebak Hewan</span>
         </button>
-        <button class="menu-card card-transportasi" data-go="transportasi">
+        <button class="orbit-card card-transportasi orbit-8" data-go="transportasi">
           <span class="emoji">🚗</span>
-          <span>Tebak Transportasi</span>
+          <span class="label">Transportasi</span>
         </button>
       </div>
     </div>
