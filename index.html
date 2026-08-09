@@ -768,17 +768,55 @@
     }catch(e){ if(onEnd) onEnd(); }
   }
 
+  // ---- real voice-actor recordings, with automatic TTS fallback ----
+  // Looks for an mp3 at voices/<key>.mp3. If it exists, plays it (real human voice).
+  // If it's missing or fails to load, seamlessly falls back to the TTS voice above —
+  // so the game keeps working today, and switches to real recordings the moment
+  // files are dropped into the voices/ folder, no code changes needed.
+  function playVoice(key, fallbackText, onStart, onEnd){
+    var settled = false;
+    function useFallback(){
+      if(settled) return;
+      settled = true;
+      speak(fallbackText, onStart, onEnd);
+    }
+    try{
+      var audio = new Audio('voices/' + key + '.mp3');
+      audio.addEventListener('playing', function(){
+        if(settled) return;
+        settled = true;
+        duckMusic();
+        if(onStart) onStart();
+      });
+      audio.addEventListener('ended', function(){
+        unduckMusic();
+        if(onEnd) onEnd();
+      });
+      audio.addEventListener('error', useFallback);
+      var p = audio.play();
+      if(p && p.catch){ p.catch(useFallback); }
+    }catch(e){ useFallback(); }
+  }
+
+  function slugify(str){
+    return str.toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
   // cheerful praise cheers spoken after every correct answer, across all games
   var praisePhrases = ['Hebat!', 'Betul sekali!', 'Pintar!', 'Wah, bagus!', 'Iya, benar!', 'Pintar sekali!'];
   function speakPraise(onDone){
-    var phrase = praisePhrases[Math.floor(Math.random() * praisePhrases.length)];
+    var idx = Math.floor(Math.random() * praisePhrases.length);
+    var phrase = praisePhrases[idx];
     var minDelay = 450;
     var start = Date.now();
-    speak(phrase, null, function(){
+    playVoice('pujian/pujian-' + (idx + 1), phrase, null, function(){
       var wait = Math.max(0, minDelay - (Date.now() - start));
       setTimeout(function(){ if(onDone) onDone(); }, wait);
     });
   }
+
 
   function shuffle(arr){
     for(var i = arr.length - 1; i > 0; i--){
@@ -868,8 +906,12 @@
   function speakSeqPrompt(){
     var label = seq.mode === 'angka' ? 'angka' : 'huruf';
     var btn = document.getElementById('seqSpeakBtn');
-    var pep = ['Ayo cari ', 'Yuk cari ', 'Coba cari '][Math.floor(Math.random() * 3)];
-    speak(pep + label + ' ' + seq.items[seq.index] + '!',
+    var value = seq.items[seq.index];
+    var text = 'Cari ' + label + ' ' + value;
+    var key = seq.mode === 'angka'
+      ? 'angka/angka-' + value
+      : 'huruf/huruf-' + value.toLowerCase();
+    playVoice(key, text,
       function(){ btn.classList.add('speaking'); },
       function(){ btn.classList.remove('speaking'); }
     );
@@ -1005,7 +1047,9 @@
   function speakColorPrompt(){
     if(!colorGame.current) return;
     var btn = document.getElementById('colorSpeakBtn');
-    speak(colorGame.current.name + ' ini warnanya apa ya?',
+    var text = colorGame.current.name + ' ini warnanya apa ya?';
+    var key = 'warna-buah/warna-' + slugify(colorGame.current.name);
+    playVoice(key, text,
       function(){ btn.classList.add('speaking'); },
       function(){ btn.classList.remove('speaking'); }
     );
@@ -1073,7 +1117,9 @@
   function speakShapePrompt(){
     if(!shapeGame.current) return;
     var btn = document.getElementById('shapeSpeakBtn');
-    speak('Yang mana gambar ' + shapeGame.current.name + '?',
+    var text = 'Yang mana gambar ' + shapeGame.current.name + '?';
+    var key = 'bentuk/bentuk-' + shapeGame.current.key;
+    playVoice(key, text,
       function(){ btn.classList.add('speaking'); },
       function(){ btn.classList.remove('speaking'); }
     );
@@ -1181,7 +1227,9 @@
   function speakPuzzlePrompt(){
     if(!puzzleGame.current) return;
     var btn = document.getElementById('puzzleSpeakBtn');
-    speak('Ayo susun gambar ' + puzzleGame.current.name + '!',
+    var text = 'Ayo susun gambar ' + puzzleGame.current.name + '!';
+    var key = 'puzzle/puzzle-' + slugify(puzzleGame.current.name);
+    playVoice(key, text,
       function(){ btn.classList.add('speaking'); },
       function(){ btn.classList.remove('speaking'); }
     );
@@ -1295,7 +1343,9 @@
   function speakAnimalPrompt(){
     if(!animalGame.current) return;
     var btn = document.getElementById('animalSpeakBtn');
-    speak('Yang mana hewan ' + animalGame.current.name + '?',
+    var text = 'Yang mana hewan ' + animalGame.current.name + '?';
+    var key = 'hewan/hewan-' + slugify(animalGame.current.name);
+    playVoice(key, text,
       function(){ btn.classList.add('speaking'); },
       function(){ btn.classList.remove('speaking'); }
     );
@@ -1417,16 +1467,8 @@
     { key:'angka', word:'angka', items: guessNumberItems, render:'tile' },
     { key:'huruf', word:'huruf', items: guessLetterItems, render:'tile' }
   ];
-  var promptTemplates = [
-    'Yang mana {word} {name}?',
-    'Coba cari {word} {name}?',
-    'Ayo tunjukkan {word} {name}?',
-    'Dimana {word} {name} ya?',
-    'Yuk, sentuh {word} {name}!',
-    'Hayo, mana {word} {name}?'
-  ];
 
-  var guessGame = { round: 0, totalRounds: 8, current: null, options: [], categoryRender: 'emoji', promptText: '' };
+  var guessGame = { round: 0, totalRounds: 8, current: null, options: [], categoryRender: 'emoji', promptText: '', promptKey: '' };
 
   function startGuessGame(){
     currentMode = 'tebak';
@@ -1459,10 +1501,24 @@
     shuffle(chosen);
     guessGame.options = chosen;
 
-    var template = promptTemplates[Math.floor(Math.random() * promptTemplates.length)];
-    var text = template.replace('{word}', cat.word).replace('{name}', target.name);
-    text = text.charAt(0).toUpperCase() + text.slice(1);
+    // fixed, canonical phrasing per category so it maps to one real recording per item
+    // (reuses the same recordings as the matching dedicated game where possible)
+    var text, key;
+    if(cat.key === 'angka'){
+      text = 'Cari angka ' + target.name;
+      key = 'angka/angka-' + target.name;
+    } else if(cat.key === 'huruf'){
+      text = 'Cari huruf ' + target.name;
+      key = 'huruf/huruf-' + target.name.toLowerCase();
+    } else if(cat.key === 'hewan'){
+      text = 'Yang mana hewan ' + target.name + '?';
+      key = 'hewan/hewan-' + slugify(target.name);
+    } else {
+      text = 'Yang mana buah ' + target.name + '?';
+      key = 'buah-tebak/buah-' + slugify(target.name);
+    }
     guessGame.promptText = text;
+    guessGame.promptKey = key;
 
     document.getElementById('guessPrompt').textContent = text;
     renderGuessOptions();
@@ -1471,7 +1527,7 @@
 
   function askGuessQuestion(){
     var btn = document.getElementById('guessReplayBtn');
-    speak(guessGame.promptText,
+    playVoice(guessGame.promptKey, guessGame.promptText,
       function(){ btn.classList.add('speaking'); },
       function(){ btn.classList.remove('speaking'); }
     );
