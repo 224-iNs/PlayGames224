@@ -96,6 +96,58 @@
   }
   .btn-music:active{ transform: translateY(4px); box-shadow:none; }
   .btn-music.muted{ opacity:.55; }
+
+  .start-cta{
+    display:flex; align-items:center; gap:12px;
+    background: var(--berry);
+    color: var(--white);
+    border:none;
+    border-radius: 999px;
+    padding: 20px 38px;
+    font-family:'Baloo 2', sans-serif;
+    font-weight:700;
+    font-size: clamp(1.05rem, 4vw, 1.5rem);
+    box-shadow: var(--shadow);
+    cursor:pointer;
+    margin-top: 1vh;
+  }
+  .start-cta:active{ transform: translateY(6px); box-shadow: 0 2px 0 rgba(91,84,104,0.15); }
+  .start-cta-emoji{ font-size:1.5em; line-height:1; }
+
+  .modal-backdrop{
+    position:fixed; inset:0;
+    background: rgba(91,84,104,0.45);
+    display:none; align-items:center; justify-content:center;
+    z-index:50;
+    padding: 4vh 4vw;
+  }
+  .modal-backdrop.open{ display:flex; }
+  .modal-panel{
+    position:relative;
+    background: var(--sky);
+    border-radius: 32px;
+    padding: 30px 20px 26px;
+    max-width: 720px; width:100%;
+    max-height: 88vh;
+    overflow-y:auto;
+    box-shadow: 0 14px 0 rgba(91,84,104,0.18);
+  }
+  .modal-close{
+    position:absolute; top:14px; right:14px;
+    width:44px; height:44px; border-radius:50%; border:none;
+    background: var(--white); color: var(--ink);
+    font-size:1.15rem; display:flex; align-items:center; justify-content:center;
+    box-shadow: 0 4px 0 rgba(91,84,104,0.15);
+    cursor:pointer;
+  }
+  .modal-close:active{ transform: translateY(3px); box-shadow:none; }
+  .modal-title{
+    font-family:'Baloo 2', sans-serif; font-weight:800;
+    font-size: clamp(1.25rem, 4.5vw, 1.7rem);
+    color: var(--ink);
+    text-align:center;
+    margin: 4px 0 22px 0;
+  }
   .menu-grid{
     display:flex; gap: clamp(16px, 3vw, 28px);
     flex-wrap:wrap; justify-content:center; max-width: 900px;
@@ -378,37 +430,50 @@
     <button class="btn-music" id="musicToggleBtn" aria-label="Musik">🎵</button>
     <h1 class="title">Ayo Bermain Sambil <span>Belajar</span></h1>
     <p class="subtitle">Pilih Permainan Yang Mau Dimainkan Ya</p>
-    <div class="menu-grid">
-      <button class="menu-card card-angka" data-go="angka">
-        <span class="emoji">🔢</span>
-        <span>Angka</span>
-      </button>
-      <button class="menu-card card-huruf" data-go="huruf">
-        <span class="emoji">🔤</span>
-        <span>Huruf</span>
-      </button>
-      <button class="menu-card card-warna" data-go="warna">
-        <span class="emoji">🍎</span>
-        <span>Warna Buah</span>
-      </button>
-      <button class="menu-card card-bentuk" data-go="bentuk">
-        <span class="emoji">🔺</span>
-        <span>Tebak Gambar</span>
-      </button>
-      <button class="menu-card card-tebak" data-go="tebak">
-        <span class="emoji">🔊</span>
-        <span>Dengar &amp; Tebak</span>
-      </button>
-      <button class="menu-card card-puzzle" data-go="puzzle">
-        <span class="emoji">🧩</span>
-        <span>Puzzle</span>
-      </button>
-      <button class="menu-card card-hewan" data-go="hewan">
-        <span class="emoji">🐾</span>
-        <span>Tebak Hewan</span>
-      </button>
-    </div>
+    <button class="start-cta" id="openGameModalBtn">
+      <span class="start-cta-emoji">🎮</span>
+      <span>Silahkan pilih dulu ya</span>
+    </button>
   </section>
+
+  <!-- POPUP PILIH GAME -->
+  <div class="modal-backdrop" id="gameModalBackdrop">
+    <div class="modal-panel">
+      <button class="modal-close" id="closeGameModalBtn" aria-label="Tutup">✕</button>
+      <p class="modal-title">Silahkan pilih dulu ya</p>
+      <div class="menu-grid">
+        <button class="menu-card card-angka" data-go="angka">
+          <span class="emoji">🔢</span>
+          <span>Angka</span>
+        </button>
+        <button class="menu-card card-huruf" data-go="huruf">
+          <span class="emoji">🔤</span>
+          <span>Huruf</span>
+        </button>
+        <button class="menu-card card-warna" data-go="warna">
+          <span class="emoji">🍎</span>
+          <span>Warna Buah</span>
+        </button>
+        <button class="menu-card card-bentuk" data-go="bentuk">
+          <span class="emoji">🔺</span>
+          <span>Tebak Gambar</span>
+        </button>
+        <button class="menu-card card-tebak" data-go="tebak">
+          <span class="emoji">🔊</span>
+          <span>Dengar &amp; Tebak</span>
+        </button>
+        <button class="menu-card card-puzzle" data-go="puzzle">
+          <span class="emoji">🧩</span>
+          <span>Puzzle</span>
+        </button>
+        <button class="menu-card card-hewan" data-go="hewan">
+          <span class="emoji">🐾</span>
+          <span>Tebak Hewan</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
 
   <!-- ANGKA & HURUF GAME (shared layout) -->
   <section id="sequence" class="screen">
@@ -636,6 +701,18 @@
       if(musicEnabled){ startMusic(); }
       updateMusicButtonUI();
     }
+  });
+
+  // ---- game picker popup ----
+  var gameModalBackdrop = document.getElementById('gameModalBackdrop');
+  document.getElementById('openGameModalBtn').addEventListener('click', function(){
+    gameModalBackdrop.classList.add('open');
+  });
+  document.getElementById('closeGameModalBtn').addEventListener('click', function(){
+    gameModalBackdrop.classList.remove('open');
+  });
+  gameModalBackdrop.addEventListener('click', function(e){
+    if(e.target === gameModalBackdrop){ gameModalBackdrop.classList.remove('open'); }
   });
 
   // ---- speech (text-to-speech) for "Dengar & Tebak" game ----
@@ -1438,6 +1515,7 @@
     var goEl = e.target.closest('[data-go]');
     if(!goEl) return;
     var dest = goEl.dataset.go;
+    gameModalBackdrop.classList.remove('open');
     if(dest === 'menu'){
       if(speechSupported){ window.speechSynthesis.cancel(); }
       showScreen('menu');
