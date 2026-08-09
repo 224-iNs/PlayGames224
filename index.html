@@ -17,6 +17,7 @@
     --grape:#C6ACEA;
     --peach:#FFC79B;
     --mint:#A9E4D8;
+    --skyblue:#A8CFF0;
     --ink:#5B5468;
     --white:#FFFFFF;
     --shadow: 0 8px 0 rgba(91,84,104,0.14);
@@ -190,6 +191,7 @@
   .card-bentuk{ background: var(--grass); }
   .card-puzzle{ background: var(--sun); color: var(--ink); }
   .card-hewan{ background: var(--mint); }
+  .card-transportasi{ background: var(--skyblue); }
 
   /* ---------- GAME SCREENS SHARED ---------- */
   .topbar{
@@ -444,7 +446,6 @@
     <button class="btn-music" id="musicToggleBtn" aria-label="Musik">🎵</button>
     <div class="menu-textbox">
       <h1 class="title">Ayo Bermain Sambil <span>Belajar</span></h1>
-      <p class="subtitle">Pilih Permainan Yang Mau Dimainkan Ya</p>
     </div>
     <button class="start-cta" id="openGameModalBtn">
       <span class="start-cta-emoji">🎮</span>
@@ -485,6 +486,10 @@
         <button class="menu-card card-hewan" data-go="hewan">
           <span class="emoji">🐾</span>
           <span>Tebak Hewan</span>
+        </button>
+        <button class="menu-card card-transportasi" data-go="transportasi">
+          <span class="emoji">🚗</span>
+          <span>Tebak Transportasi</span>
         </button>
       </div>
     </div>
@@ -555,6 +560,19 @@
     </div>
     <div class="guess-pill" id="animalPrompt">Yang mana hewan kucing?</div>
     <div class="tiles-grid grid-shape" id="animalGrid"></div>
+  </section>
+
+  <!-- TEBAK TRANSPORTASI -->
+  <section id="transportgame" class="screen">
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="btn-back" data-go="menu">←</button>
+        <button class="btn-speak" id="transportSpeakBtn" aria-label="Dengar lagi">🔊</button>
+      </div>
+      <div class="stars-tray" id="transportStars">⭐</div>
+    </div>
+    <div class="guess-pill" id="transportPrompt">Yang mana mobil?</div>
+    <div class="tiles-grid grid-shape" id="transportGrid"></div>
   </section>
 
   <!-- TEBAK BUAH DARI SUARA -->
@@ -1395,6 +1413,130 @@
     speakAnimalPrompt();
   });
 
+  // ---------------- TEBAK TRANSPORTASI ----------------
+  var transportItems = [
+    { emoji:'🚗', name:'Mobil' },
+    { emoji:'🚕', name:'Taksi' },
+    { emoji:'🚙', name:'Jip' },
+    { emoji:'🚌', name:'Bus' },
+    { emoji:'🚎', name:'Bus Listrik' },
+    { emoji:'🚓', name:'Mobil Polisi' },
+    { emoji:'🚑', name:'Ambulans' },
+    { emoji:'🚒', name:'Mobil Pemadam Kebakaran' },
+    { emoji:'🚐', name:'Van' },
+    { emoji:'🛻', name:'Truk Pikap' },
+    { emoji:'🚚', name:'Truk' },
+    { emoji:'🚛', name:'Truk Besar' },
+    { emoji:'🚜', name:'Traktor' },
+    { emoji:'🏎️', name:'Mobil Balap' },
+    { emoji:'🏍️', name:'Motor' },
+    { emoji:'🛵', name:'Skuter' },
+    { emoji:'🚲', name:'Sepeda' },
+    { emoji:'🛴', name:'Skuter Dorong' },
+    { emoji:'🛼', name:'Sepatu Roda' },
+    { emoji:'🛹', name:'Skateboard' },
+    { emoji:'🚂', name:'Kereta Api' },
+    { emoji:'🚆', name:'Kereta' },
+    { emoji:'🚄', name:'Kereta Cepat' },
+    { emoji:'🚊', name:'Trem' },
+    { emoji:'🚝', name:'Monorel' },
+    { emoji:'🚡', name:'Kereta Gantung' },
+    { emoji:'🚃', name:'Gerbong Kereta' },
+    { emoji:'✈️', name:'Pesawat' },
+    { emoji:'🛩️', name:'Pesawat Kecil' },
+    { emoji:'🚁', name:'Helikopter' },
+    { emoji:'🚀', name:'Roket' },
+    { emoji:'⛵', name:'Perahu Layar' },
+    { emoji:'🚤', name:'Speedboat' },
+    { emoji:'🛶', name:'Kano' },
+    { emoji:'🚢', name:'Kapal' },
+    { emoji:'🛺', name:'Bajaj' }
+  ];
+
+  var transportGame = { round: 0, totalRounds: 8, current: null, options: [], usedNames: {} };
+
+  function startTransportGame(){
+    currentMode = 'transportasi';
+    transportGame.round = 0;
+    transportGame.usedNames = {};
+    updateTransportStars();
+    nextTransportRound();
+    showScreen('transportgame');
+  }
+
+  function nextTransportRound(){
+    if(transportGame.round >= transportGame.totalRounds){
+      setTimeout(celebrate, 400);
+      return;
+    }
+    var pool = transportItems.filter(function(t){ return !transportGame.usedNames[t.name]; });
+    if(pool.length < 4){
+      transportGame.usedNames = {};
+      pool = transportItems.slice();
+    }
+    shuffle(pool);
+    var options = pool.slice(0, 4);
+    var target = options[Math.floor(Math.random() * options.length)];
+    transportGame.current = target;
+    transportGame.usedNames[target.name] = true;
+    shuffle(options);
+    transportGame.options = options;
+
+    document.getElementById('transportPrompt').textContent = 'Yang mana ' + target.name + '?';
+    renderTransportOptions();
+    setTimeout(speakTransportPrompt, 300);
+  }
+
+  function speakTransportPrompt(){
+    if(!transportGame.current) return;
+    var btn = document.getElementById('transportSpeakBtn');
+    var text = 'Yang mana ' + transportGame.current.name + '?';
+    var key = 'transportasi/transportasi-' + slugify(transportGame.current.name);
+    playVoice(key, text,
+      function(){ btn.classList.add('speaking'); },
+      function(){ btn.classList.remove('speaking'); }
+    );
+  }
+
+  function renderTransportOptions(){
+    var grid = document.getElementById('transportGrid');
+    grid.innerHTML = '';
+    transportGame.options.forEach(function(item){
+      var btn = document.createElement('button');
+      btn.className = 'tile guess-tile';
+      var em = document.createElement('div');
+      em.className = 'guess-emoji';
+      em.textContent = item.emoji;
+      btn.appendChild(em);
+      btn.addEventListener('click', function(){ onTransportPick(btn, item); });
+      grid.appendChild(btn);
+    });
+  }
+
+  function onTransportPick(btn, item){
+    if(btn.classList.contains('done')) return;
+    if(item.name === transportGame.current.name){
+      playCorrect();
+      btn.classList.add('correct-pop', 'done');
+      transportGame.round++;
+      updateTransportStars();
+      speakPraise(function(){ nextTransportRound(); });
+    } else {
+      playWrong();
+      btn.classList.remove('wrong-shake');
+      void btn.offsetWidth;
+      btn.classList.add('wrong-shake');
+    }
+  }
+
+  function updateTransportStars(){
+    document.getElementById('transportStars').textContent = transportGame.round + ' ⭐';
+  }
+
+  document.getElementById('transportSpeakBtn').addEventListener('click', function(){
+    speakTransportPrompt();
+  });
+
   // ---------------- DENGAR & TEBAK (audio, kategori acak) ----------------
   var animals = [
     { emoji:'🐱', name:'Kucing' },
@@ -1599,6 +1741,7 @@
     if(dest === 'tebak'){ startGuessGame(); return; }
     if(dest === 'puzzle'){ startPuzzleGame(); return; }
     if(dest === 'hewan'){ startAnimalGame(); return; }
+    if(dest === 'transportasi'){ startTransportGame(); return; }
   });
 
   document.getElementById('playAgainBtn').addEventListener('click', function(){
@@ -1614,6 +1757,8 @@
       startPuzzleGame();
     } else if(currentMode === 'hewan'){
       startAnimalGame();
+    } else if(currentMode === 'transportasi'){
+      startTransportGame();
     } else {
       showScreen('menu');
     }
